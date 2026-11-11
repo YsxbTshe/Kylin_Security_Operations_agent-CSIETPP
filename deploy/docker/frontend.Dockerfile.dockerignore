@@ -1,0 +1,7 @@
+# BuildKit 会优先读与 Dockerfile 同名的 <dockerfile>.dockerignore。
+# 前端构建上下文是 apps/<app>/，里面的 node_modules（数百 MB）与 dist 完全没必要传给
+# 构建器——依赖在镜像里用 npm ci 重装，产物在镜像里重新 build。
+node_modules
+dist
+.gitignore
+README.md

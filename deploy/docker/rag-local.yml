@@ -1,0 +1,41 @@
+# Local development + benchmark stack for Graph RAG.
+# pgvector (vectors + graph via recursive CTE, same DB) + Elasticsearch (chunk-level BM25).
+# Milvus/Redis-stack from rag-services.yml are intentionally dropped (see Graph-RAG design doc §9).
+services:
+  pgvector:
+    image: pgvector/pgvector:pg16
+    container_name: kylinops-pgvector
+    environment:
+      POSTGRES_USER: kylinops
+      POSTGRES_PASSWORD: kylinops
+      POSTGRES_DB: kylinops
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgvector-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kylinops"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
+    container_name: kylinops-es-local
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: -Xms1g -Xmx1g
+    ports:
+      - "9200:9200"
+    volumes:
+      - es-local-data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  pgvector-data:
+  es-local-data:

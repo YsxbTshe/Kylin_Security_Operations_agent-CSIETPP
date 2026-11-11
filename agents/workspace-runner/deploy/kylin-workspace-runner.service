@@ -1,0 +1,71 @@
+[Unit]
+Description=Kylin Workspace Runner (rootless Podman sandbox broker)
+Documentation=file:///opt/kylin-security-ops-agent/agents/workspace-runner/deploy/README.md
+# 只做启动顺序约束，不做依赖：runner 起不来时 kylin.workspace.* 六个工具会失败，
+# 但另外 40 个工具（只读工具与经 privhelper 的写工具）不受影响，Agent 该照常服务。
+Before=kylin-node-executor.service
+
+[Service]
+Type=simple
+# 专用账号，不是 kylin-agent：sandbox 的 podman 存储、快照镜像、审计日志都归它，
+# Agent 进程被攻陷时拿不到 podman 的控制面。两者靠组打通（见下面 socket 权限说明）。
+User=kylin-workspace
+Group=kylin-workspace
+ExecStart=/opt/kylin-security-ops-agent/kylin-workspace-runner
+Restart=always
+RestartSec=5
+# 优雅关闭要停并删掉本 runner 管理的所有容器，代码里给了 30s 预算，这里留足余量。
+TimeoutStopSec=60
+KillMode=mixed
+
+# --- rootless Podman 的硬性前提（装机时一次性配好，见 deploy/README.md）---
+# 1) /etc/subuid、/etc/subgid 里要有 kylin-workspace 的映射区间；
+# 2) loginctl enable-linger kylin-workspace（否则没有用户级 systemd/dbus，
+#    podman 只能退回 cgroupfs，内存/PID 限制会失效）；
+# 3) 镜像必须**预先**构建好（podman build -t kylin-workspace:latest），
+#    本服务运行期不联网、也不该联网去拉镜像。
+Environment=HOME=/var/lib/kylin-workspace
+Environment=XDG_RUNTIME_DIR=/run/kylin-workspace
+Environment=XDG_CONFIG_HOME=/var/lib/kylin-workspace/.config
+Environment=XDG_DATA_HOME=/var/lib/kylin-workspace/.local/share
+EnvironmentFile=-/etc/kylin-workspace-runner.env
+Environment=KYLIN_WORKSPACE_SOCKET=/run/kylin-workspace/workspace.sock
+Environment=KYLIN_WORKSPACE_ROOT=/var/lib/kylin-workspace
+Environment=KYLIN_WORKSPACE_IMAGE=kylin-workspace:latest
+# SO_PEERCRED 校验的授权调用方：node-executor 以 kylin-agent 运行。
+# 解析不了这个用户，进程会启动失败——刻意的，不接受"跑起来了但谁都能连"。
+Environment=KYLIN_WORKSPACE_PEER_USER=kylin-agent
+
+# --- 加固 ---
+# socket 落在 RuntimeDirectory（随重启清空）下，同时它也是 XDG_RUNTIME_DIR。
+# 0750 让 kylin-agent（属于 kylin-workspace 组）能穿进目录；socket 文件本身由进程
+# chmod 成 0660（见 internal/protocol/server.go），于是"同组可连、其他用户不可连"，
+# 内核侧再由 SO_PEERCRED 复核一次 uid。
+RuntimeDirectory=kylin-workspace
+RuntimeDirectoryMode=0750
+# podman 的容器存储、快照镜像、审计日志都在这里；StateDirectory 在 ProtectSystem=strict
+# 下自动可写，不必再写 ReadWritePaths。
+StateDirectory=kylin-workspace
+StateDirectoryMode=0750
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+# rootless podman 要在自己的 cgroup 子树里设 memory/pids 限制，必须委派（要求 cgroup v2）。
+Delegate=yes
+
+# --- 刻意**没有**开启的加固项，别当成遗漏 ---
+# NoNewPrivileges / RestrictAddressFamilies / RestrictNamespaces / RestrictSUIDSGID /
+# MemoryDenyWriteExecute / LockPersonality / ProtectKernelModules / ProtectKernelTunables：
+# 这些选项在 systemd 里**会隐式打开 NoNewPrivileges**（见 systemd.exec(5)），而 rootless
+# Podman 建用户命名空间要执行 setuid 的 newuidmap/newgidmap——NoNewPrivileges 一开，
+# 映射直接失败，容器根本创建不出来。privhelper 能全开是因为它本身就是 root、不需要提权路径；
+# 这里是相反的情形，全开等于把功能关掉。
+# 网络面的收敛改由别处保证：沙箱容器一律 --network=none，runner 自身只监听一个 unix socket，
+# 镜像预先构建，运行期无需任何出站连接。
+# ProtectControlGroups 同理不设：它与上面的 Delegate=yes 直接冲突。
+#
+# RestrictNamespaces 尤其要注意：它不仅隐式打开 NoNewPrivileges，还会直接禁掉
+# CLONE_NEWUSER —— 那正是 rootless 容器赖以存在的机制。
+
+[Install]
+WantedBy=multi-user.target

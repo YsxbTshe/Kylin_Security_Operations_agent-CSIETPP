@@ -1,0 +1,61 @@
+name: backend-tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  h2:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: maven
+      # verify 而非 test：pom 已绑定 failsafe，只有 verify 才会执行 *IT。
+      # 喂养 04/05 提交报告数字的两个基准（AgentSafetyBenchmarkIT /
+      # AgentArchitectureBenchmarkIT）无外部依赖，会在这里真跑并断言；
+      # 需要 Postgres/RAG 外部栈的 IT 由各自的环境变量开关自动跳过。
+      # 不设 -Dbench.regenerate，因此 CI 不会改写仓库里的 docs/ 报告。
+      - name: H2 unit tests + 无外部依赖的基准 IT
+        run: mvn -B verify
+
+  postgres:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/backend
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: kylinops
+          POSTGRES_PASSWORD: kylinops
+          POSTGRES_DB: kylinops
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U kylinops"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: maven
+      # 同样走 verify：POSTGRES_IT_JDBC_URL 一设，PostgresPgvectorMigrationIT 与
+      # RagPgVectorParityIT 两个 IT 都会解除门控执行（此前 -Dtest=… 只点名了前者）。
+      - name: PostgreSQL Flyway + pgvector IT
+        env:
+          POSTGRES_IT_JDBC_URL: jdbc:postgresql://localhost:5432/kylinops
+          POSTGRES_IT_USERNAME: kylinops
+          POSTGRES_IT_PASSWORD: kylinops
+        run: mvn -B verify

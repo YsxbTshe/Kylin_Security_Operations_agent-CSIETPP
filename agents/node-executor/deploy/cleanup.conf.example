@@ -1,0 +1,80 @@
+# 系统垃圾清理的作用域与判据（root 属主，与 privhelper allow.conf 同目录同要求）
+#
+# 安装：
+#   sudo install -D -m 0644 -o root -g root \
+#     agents/node-executor/deploy/cleanup.conf.example /etc/kylin-privhelper/cleanup.conf
+#
+# 这个文件决定「Agent 被允许碰哪些目录」，因此和 allow.conf 一样：
+#   - 必须属 root 且组/其他用户不可写；不合格则整份配置作废，回退到内置的两个演示目录；
+#   - 文件缺失、读不了、内容非法 —— 全部 fail-closed 回退，**绝不会**变成「允许任意目录」；
+#   - 格式只支持 key=value，拼错的键名会让配置整体作废（并在 journal 里留一行），
+#     而不是静默沿用默认值；
+#   - 它只能**收紧或平移**作用域，不能突破硬禁清单（见下）。
+#
+# 生效方式：privhelper 与 node-executor 都在启动时读它。强制点在 privhelper 侧
+# （它以 root 实际动文件），daemon 侧那份只是让只读的 plan 给出一致的预览。
+# 改完必须 `sudo systemctl restart kylin-privhelper kylin-node-executor`。
+
+
+# ---------------------------------------------------------------------------
+# 允许清理的目录白名单（默认拒绝，精确匹配，非前缀匹配）
+# ---------------------------------------------------------------------------
+# 精确匹配意味着：写了 /var/log/aiops-demo，那么 /var/log/aiops-demo-evil 和
+# /var/log/aiops-demo/nested 都会被拒。要清理子目录就把子目录也写进来。
+#
+# 下列目录**无论怎么配都会被拒**（写了会在启动日志里报出来并丢弃该行）：
+#   - 系统根基：/ /bin /boot /dev /etc /home /lib /proc /root /run /sbin /srv /sys /usr
+#   - 范围过大的一级目录：/var /var/log /var/lib /var/cache /tmp /opt（至少要两级）
+#   - 审计与数据库子树：/var/log/audit、/var/lib/mysql、/var/lib/postgresql 等，
+#     以及任何是它们上级的路径（放行 /var/lib 等于连 /var/lib/mysql 一起放行）
+#
+# 注意：加目录不止改这一行。
+#
+#   1) kylin-privhelper.service 的 ReadWritePaths 必须同步加上同一个目录。
+#      助手以 root 写这些目录，而 ProtectSystem=strict 会挡住 ReadWritePaths 之外的
+#      一切写入——漏了这一步会得到「配置看起来生效了、执行却全是 EROFS」。
+#   2) 该目录应改为 root 属主（`install -d -m 0755 -o root -g root <dir>`）。
+#      否则被攻陷的 daemon 可以绕过工具直接截断文件，审批就不再是操作系统层面的强制点。
+#   3) 重启两个 unit：`systemctl restart kylin-privhelper kylin-node-executor`。
+#      节点上报给控制面的 allowedRoots 会跟着这份配置走（否则控制面会先判 R5 拦下，
+#      现场只看得到一句「参数路径超出 allowedRoots」）；不重启就还是旧值。
+#   4) 若新目录不在 KYLIN_ALLOWED_PATH_ROOTS 覆盖范围内，node-executor 启动时会打一行
+#      「工具 X 声明的路径根 [...] 不在执行器允许范围内」的警告。该底线目前不作用于
+#      清理工具本身（清理走 cleanupcore 的白名单），但同目录下的只读排查工具
+#      （kylin.disk.large_files / kylin.file.stat 等）会受它约束，建议一并补上。
+cleanup_allowed_dirs=/var/log/aiops-demo,/tmp/aiops-demo-logs
+
+
+# ---------------------------------------------------------------------------
+# 分类判据阈值
+# ---------------------------------------------------------------------------
+# 日志保留天数：未轮转的日志超过这个天数才算「过期日志」，可清理。
+# 已轮转的历史日志（app.log.1 / app.log-20260801.gz 之流）不受此项约束——
+# 写入方已经切到新文件，它们从产生那一刻起就是归档。
+# 合法区间 1..3650；越界或写成 0 会被判为手滑，回退到默认值 7 并在日志里报出来。
+cleanup_expired_log_days=7
+
+# 非日志、非缓存的普通文件要多久没动过才进「可清理文件」。
+# 明显长于日志保留期：这类文件我们并不知道它是什么，只知道它不像关键文件。
+# 合法区间 1..3650，默认 30。
+cleanup_stale_file_days=30
+
+# 活动日志判定窗口（分钟）：未轮转的日志在这个窗口内被写过，就当作「正在写入」并保留。
+# 截断一个正在被写的日志会让写入方继续在原偏移量落笔，得到一个前半段是空洞的文件。
+# 合法区间 1..1440，默认 30。
+cleanup_active_log_minutes=30
+
+
+# ---------------------------------------------------------------------------
+# 追加保护模式（只增不减）
+# ---------------------------------------------------------------------------
+# 内置保护名单已经覆盖数据库文件（*.db/*.sqlite/*.ibd…）、业务配置（*.conf/*.yaml/*.json…）、
+# 凭据（*.pem/*.key/*.jks…）、运行时状态（*.pid/*.sock/*.lock）、审计与登录证据
+# （audit.log*/wtmp*/btmp*），以及文件名里含 mysql/postgres/redis/audit 等关键组件标识的文件
+# （这是「不会误删数据库日志」的直接落点：mysql-slow.log 扩展名是 .log，但它不是普通日志）。
+#
+# 这一项只能**往上加**。**没有任何配置项可以把内置保护名单里的模式去掉**——
+# 保护名单要能被配置削弱，它就不再是保护名单了。要放宽只能改代码并重新走发布流程。
+#
+# 只匹配文件名，不能含 /。留空表示不追加。
+# cleanup_protect_extra=*.report,*.ledger

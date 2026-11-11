@@ -1,0 +1,52 @@
+name: go-agents
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  gofmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: agents/node-executor/go.mod
+          cache: false
+      - name: gofmt gate (agents/)
+        run: |
+          unformatted="$(gofmt -l agents/)"
+          if [ -n "$unformatted" ]; then
+            echo "::error::gofmt found unformatted files:"
+            echo "$unformatted"
+            echo "--- diff ---"
+            gofmt -d agents/
+            exit 1
+          fi
+          echo "gofmt clean"
+
+  build-test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        module:
+          - node-executor
+          - workspace-runner
+    defaults:
+      run:
+        working-directory: agents/${{ matrix.module }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: agents/${{ matrix.module }}/go.mod
+          # workspace-runner is stdlib-only and has no go.sum; hash go.mod so the
+          # cache key resolves for both modules.
+          cache-dependency-path: agents/${{ matrix.module }}/go.mod
+      - name: go build
+        run: go build ./...
+      - name: go vet
+        run: go vet ./...
+      - name: go test
+        run: go test ./...

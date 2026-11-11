@@ -1,0 +1,14 @@
+version: v2
+plugins:
+  - remote: buf.build/protocolbuffers/java:v33.2
+    out: services/backend/src/generated/java
+  - remote: buf.build/grpc/java:v1.76.0
+    out: services/backend/src/generated/java
+  - remote: buf.build/protocolbuffers/go:v1.36.11
+    out: agents/node-executor
+    opt:
+      - module=gitee.com/SuperSkidder/kylin-security-ops-agent/agents/node-executor
+  - remote: buf.build/grpc/go:v1.6.0
+    out: agents/node-executor
+    opt:
+      - module=gitee.com/SuperSkidder/kylin-security-ops-agent/agents/node-executor

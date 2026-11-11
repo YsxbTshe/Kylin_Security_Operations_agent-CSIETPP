@@ -1,0 +1,8 @@
+# systemd-tmpfiles 配置。麒麟 V11 的 /tmp 是 tmpfs，重启后演示目录会消失；
+# 本文件让开机早期重建它，避免 kylin-privhelper 因 ReadWritePaths 缺目录而 226/NAMESPACE。
+# 安装：
+#   sudo install -m 0644 agents/node-executor/deploy/kylin-privhelper.tmpfiles \
+#     /usr/lib/tmpfiles.d/kylin-privhelper.conf
+#   sudo systemd-tmpfiles --create /usr/lib/tmpfiles.d/kylin-privhelper.conf
+d /tmp/aiops-demo-logs 0755 root root -
+d /var/log/aiops-demo 0755 root root -

@@ -1,0 +1,24 @@
+# 特权助手的允许清单（ADR-002 §3.3）
+#
+# 安装：
+#   sudo install -D -m 0644 -o root -g root \
+#     agents/node-executor/deploy/privhelper-allow.conf.example /etc/kylin-privhelper/allow.conf
+#
+# 这个文件定义特权边界本身，因此：
+#   - 必须属 root 且不可被组/其他用户写入（助手启动时会校验，不合格即拒绝启动）；
+#   - 非特权的 kylin-agent 因 Node Executor unit 的 ProtectSystem=full 无法修改它；
+#   - 格式刻意只支持 key=value，解析器越简单越不容易成为攻击面；
+#   - 拼错的键名会导致启动失败，而不是静默沿用默认值——否则你会以为限制已经配上了。
+
+# 允许被启停的服务。助手只接受完全匹配清单的服务名，且名称须满足 [A-Za-z0-9@._-]+。
+allowed_units=nginx,business-service
+
+# 允许的封禁作用域。
+allowed_scopes=ingress
+
+# 单次封禁的时长上限（分钟）。助手会解析 duration 并与之比较，
+# 而不是做字符串匹配——这正是 sudoers 表达不了的那类约束。
+max_block_minutes=60
+
+# 特权操作的频次上限（次/分钟）。计在助手侧：若计在 Agent 侧，攻陷后即可绕过。
+max_ops_per_minute=30

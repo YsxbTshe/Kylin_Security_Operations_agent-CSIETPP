@@ -1,0 +1,248 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>4.0.6</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.superskidder.kylinops</groupId>
+    <artifactId>backend</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <name>backend</name>
+    <description>Kylin security ops backend for MVP</description>
+
+    <properties>
+        <java.version>17</java.version>
+        <opentelemetry.version>1.63.0</opentelemetry.version>
+        <!-- Benchmark 报告是否重新落盘到 docs/；默认否，-Dbench.regenerate=true 显式开启。 -->
+        <bench.regenerate>false</bench.regenerate>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>io.opentelemetry</groupId>
+                <artifactId>opentelemetry-bom</artifactId>
+                <version>${opentelemetry.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>3.0.6</version>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.7.11</version>
+            <scope>runtime</scope>
+        </dependency>
+        <!--
+          H2 不能是 test scope。application.yml 的 spring.profiles.default 就是 dev，
+          dev 数据源是 H2 文件库；README「后端（H2 PostgreSQL 兼容模式默认开箱即跑）」
+          与部署文档的「演示/快速部署（默认）」都依赖它——test scope 会让
+          mvn spring-boot:run 和 java -jar backend.jar 两条路径都因缺驱动起不来。
+          改成 runtime：编译期拿不到（主代码零 org.h2 引用，杜绝编译期耦合），
+          运行期与测试期都在。需要交付不含 H2 的生产包时用 mvn -Pprod package，
+          见下方 prod profile。
+        -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcpkix-jdk18on</artifactId>
+            <version>1.82</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.erdtman</groupId>
+            <artifactId>java-json-canonicalization</artifactId>
+            <version>1.1</version>
+        </dependency>
+
+
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-netty-shaded</artifactId>
+            <version>1.76.0</version>
+        </dependency>
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-stub</artifactId>
+            <version>1.76.0</version>
+        </dependency>
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-protobuf</artifactId>
+            <version>1.76.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+            <version>4.33.2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.6.1</version>
+                <executions>
+                    <execution>
+                        <id>add-protobuf-generated-sources</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>src/generated/java</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <!--
+              集成测试门禁：surefire 默认只收 *Test，src/test/java 下的 8 个 *IT 此前
+              既不进 mvn test 也不进 mvn verify（等于从不执行）。绑定 failsafe 后
+              mvn verify 会跑 *IT 并在 verify 阶段汇报失败。
+
+              注意：会把结果写回仓库 docs/ 的 Benchmark 生成器（AgentSafetyBenchmarkIT /
+              AgentArchitectureBenchmarkIT）默认只跑断言不落盘，需显式
+              -Dbench.regenerate=true 才重新生成报告——默认 verify 不得改写仓库文档。
+              需要外部依赖的 IT（Postgres/pgvector、RAG/Memory 基准）由各自的环境变量
+              开关门控，未设置时自动跳过。
+            -->
+            <!--
+              仅供运维手工调用的 flyway:repair（不绑定任何生命周期阶段，正常构建不会执行）。
+              需要它是因为本轮修改了**已发布的 V1 基线**：V1 里的 varchar(16777216) 与 clob
+              只有 H2 收，真实 PostgreSQL 上第一条迁移就失败（详见 V1__baseline.sql 顶部说明）。
+              改 V1 会变更其校验和，已应用过旧 V1 的库启动时会报
+              "Migration checksum mismatch for migration version 1"。
+              repair 只重写 flyway_schema_history 里的校验和，不动业务数据。用法见
+              docs/06-提交文档/06-软件部署文档.md 的「升级与故障排查」。
+            -->
+            <plugin>
+                <groupId>org.flywaydb</groupId>
+                <artifactId>flyway-maven-plugin</artifactId>
+                <version>11.14.1</version>
+                <configuration>
+                    <!-- 用 filesystem 而不是 classpath:，免得 repair 还要先 mvn compile -->
+                    <locations>
+                        <location>filesystem:${project.basedir}/src/main/resources/db/migration</location>
+                        <location>filesystem:${project.basedir}/src/main/resources/db/postgresql</location>
+                    </locations>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>com.h2database</groupId>
+                        <artifactId>h2</artifactId>
+                        <version>${h2.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.postgresql</groupId>
+                        <artifactId>postgresql</artifactId>
+                        <version>42.7.11</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.flywaydb</groupId>
+                        <artifactId>flyway-database-postgresql</artifactId>
+                        <version>11.14.1</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <configuration>
+                    <systemPropertyVariables>
+                        <bench.regenerate>${bench.regenerate}</bench.regenerate>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <!--
+          生产打包：PostgreSQL 形态不需要 H2 驱动，-Pprod 打出的可执行 jar 里不含它
+          （BOOT-INF/lib 下无 h2-*.jar）。默认 profile 仍然打进去，否则
+          「H2 开箱即跑」的演示部署会当场失效。
+          用法：mvn -Pprod package，并配置 DEV_DB_URL/DEV_DB_DRIVER 指向 PostgreSQL。
+        -->
+        <profile>
+            <id>prod</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.springframework.boot</groupId>
+                        <artifactId>spring-boot-maven-plugin</artifactId>
+                        <configuration>
+                            <excludes>
+                                <exclude>
+                                    <groupId>com.h2database</groupId>
+                                    <artifactId>h2</artifactId>
+                                </exclude>
+                            </excludes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>

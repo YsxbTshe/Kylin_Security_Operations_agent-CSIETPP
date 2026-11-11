@@ -1,0 +1,25 @@
+{
+  "claim": {
+    "agent_instance_id": "agent-vector-1",
+    "agent_invocation_id": "invocation-vector-1",
+    "arguments_sm3": "jUxacZFPgGg6kasRfokLDy1xjHhfIsHn3m/RbFEwZno=",
+    "execution_attempt_id": "attempt-vector-1",
+    "execution_mode": "EXECUTION_MODE_CAUTIOUS",
+    "expires_at": "2027-01-15T08:05:00Z",
+    "issued_at": "2027-01-15T08:00:00Z",
+    "key_purpose": "approval-signing-key",
+    "lock_version": "42",
+    "node_id": "node-vector-1",
+    "risk_ceiling": "RISK_CODE_R3",
+    "run_id": "run-vector-1",
+    "tenant_id": "org-alpha",
+    "tool_id": "kylin.service.restart",
+    "tool_invocation_id": "tool-vector-1",
+    "tool_version": "1.0.0",
+    "version": 1
+  },
+  "description": "TEST ONLY: fixed Java/Go Approval Token interoperability vector",
+  "keyId": "approval-test-1",
+  "sm2UserId": "KYLIN-APPROVAL-V1",
+  "token": "kylin-approval-v1.CAESD2FwcHJvdmFsLXRlc3QtMRreAQgBEglvcmctYWxwaGEaDHJ1bi12ZWN0b3ItMSIOYWdlbnQtdmVjdG9yLTEqE2ludm9jYXRpb24tdmVjdG9yLTEyDXRvb2wtdmVjdG9yLTE6EGF0dGVtcHQtdmVjdG9yLTFCDW5vZGUtdmVjdG9yLTFKFWt5bGluLnNlcnZpY2UucmVzdGFydFIFMS4wLjBaII1MWnGRT4BoOpGrEX6JCw8tcYx4XyLB595v0WxRMGZ6YARoAnAqehRhcHByb3ZhbC1zaWduaW5nLWtleYIBBgiApKfaBooBBgispqfaBiJHMEUCIQDI9FMnia9ZddVEsmuLDzQcrg7OjoPWmsKb65Dx4tYLTgIgKQoJLI6KfUrYHc4L6lrWurTuyCZUScqSwtKFLtv2tug"
+}

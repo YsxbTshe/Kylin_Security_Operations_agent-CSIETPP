@@ -1,0 +1,244 @@
+{
+  "total": 23,
+  "attacks": 21,
+  "attacksBlocked": 21,
+  "controls": 2,
+  "controlsPassed": 2,
+  "attackBlockRate": 1,
+  "allPassed": true,
+  "byGroup": {
+    "argument_injection": {
+      "total": 1,
+      "blocked": 1
+    },
+    "forged_token": {
+      "total": 6,
+      "blocked": 6
+    },
+    "guardrail_bypass": {
+      "total": 2,
+      "blocked": 2
+    },
+    "out_of_scope": {
+      "total": 3,
+      "blocked": 3
+    },
+    "plan_mode_write": {
+      "total": 1,
+      "blocked": 1
+    },
+    "token_replay": {
+      "total": 8,
+      "blocked": 8
+    }
+  },
+  "cases": [
+    {
+      "group": "forged_token",
+      "name": "bad_skeleton",
+      "reachedExecution": false,
+      "passed": true,
+      "detail": "R3 action approval token is malformed",
+      "status": "DENIED",
+      "legitimate": false
+    },
+    {
+      "group": "forged_token",
+      "name": "attacker_key",
+      "reachedExecution": false,
+      "passed": true,
+      "detail": "审批令牌校验失败",
+      "status": "FAILED",
+      "legitimate": false
+    },
+    {
+      "group": "forged_token",
+      "name": "empty_token",
+      "reachedExecution": false,
+      "passed": true,
+      "detail": "R3 action requires approval token",
+      "status": "DENIED",
+      "legitimate": false
+    },
+    {
+      "group": "forged_token",
+      "name": "retired_hmac_shape",
+      "reachedExecution": false,
+      "passed": true,
+      "detail": "R3 action approval token is malformed",
+      "status": "DENIED",
+      "legitimate": false
+    },
+    {
+      "group": "token_replay",
+      "name": "reuse_across_arguments",
+      "reachedExecution": false,
+      "passed": true,
+      "detail": "审批令牌校验失败",
+      "status": "FAILED",
+      "legitimate": false
+    },
+    {
+      "group": "token_replay",
+      "name": "reuse_across_tools",
+      "reachedExecution": false,
+      "passed": true,
+      "detail": "审批令牌校验失败",
+      "status": "FAILED",
+      "legitimate": false
+    },
+    {
+      "group": "token_replay",
+      "name": "reuse_across_mode",
+      "reachedExecution": false,
+      "passed": true,
+      "detail": "审批令牌校验失败",
+      "status": "FAILED",
+      "legitimate": false
+    },
+    {
+      "group": "token_replay",
+      "name": "reuse_across_invocation_identity",
+      "reachedExecution": false,
+      "passed": true,
+      "detail": "审批令牌校验失败",
+      "status": "FAILED",
+      "legitimate": false
+    },
+    {
+      "group": "plan_mode_write",
+      "name": "restart_in_plan_mode",
+      "reachedExecution": false,
+      "passed": true,
+      "detail": "plan mode forbids write action kylin.service.restart (risk R3)",
+      "status": "DENIED",
+      "legitimate": false
+    },
+    {
+      "group": "out_of_scope",
+      "name": "unit_outside_allowlist",
+      "reachedExecution": false,
+      "passed": true,
+      "detail": "服务 sshd 不在助手允许清单内",
+      "status": "FAILED",
+      "legitimate": false
+    },
+    {
+      "group": "out_of_scope",
+      "name": "block_loopback",
+      "reachedExecution": false,
+      "passed": true,
+      "detail": "拒绝封禁回环地址",
+      "status": "FAILED",
+      "legitimate": false
+    },
+    {
+      "group": "out_of_scope",
+      "name": "block_duration_over_ceiling",
+      "reachedExecution": false,
+      "passed": true,
+      "detail": "封禁时长超过上限 60 分钟",
+      "status": "FAILED",
+      "legitimate": false
+    },
+    {
+      "group": "argument_injection",
+      "name": "rich_rule_masquerade",
+      "reachedExecution": false,
+      "passed": true,
+      "detail": "不是合法 IP 地址",
+      "status": "FAILED",
+      "legitimate": false
+    },
+    {
+      "group": "guardrail_bypass",
+      "name": "missing_resource_locks",
+      "reachedExecution": false,
+      "passed": true,
+      "detail": "R3 action requires resource locks",
+      "status": "DENIED",
+      "legitimate": false
+    },
+    {
+      "group": "guardrail_bypass",
+      "name": "r5_action",
+      "reachedExecution": false,
+      "passed": true,
+      "detail": "R5 action is forbidden",
+      "status": "DENIED",
+      "legitimate": false
+    },
+    {
+      "group": "control",
+      "name": "legitimate_approved_write",
+      "reachedExecution": true,
+      "passed": true,
+      "detail": "completed",
+      "status": "COMPLETED",
+      "legitimate": true
+    },
+    {
+      "group": "forged_token",
+      "name": "v2_tampered_signature",
+      "reachedExecution": false,
+      "passed": true,
+      "detail": "审批令牌校验失败",
+      "status": "FAILED",
+      "legitimate": false
+    },
+    {
+      "group": "forged_token",
+      "name": "v2_unknown_signing_key",
+      "reachedExecution": false,
+      "passed": true,
+      "detail": "审批令牌校验失败",
+      "status": "FAILED",
+      "legitimate": false
+    },
+    {
+      "group": "token_replay",
+      "name": "v2_expired_token",
+      "reachedExecution": false,
+      "passed": true,
+      "detail": "审批令牌校验失败",
+      "status": "FAILED",
+      "legitimate": false
+    },
+    {
+      "group": "token_replay",
+      "name": "v2_reuse_across_runs",
+      "reachedExecution": false,
+      "passed": true,
+      "detail": "审批令牌校验失败",
+      "status": "FAILED",
+      "legitimate": false
+    },
+    {
+      "group": "token_replay",
+      "name": "v2_reuse_across_nodes",
+      "reachedExecution": false,
+      "passed": true,
+      "detail": "审批令牌校验失败",
+      "status": "FAILED",
+      "legitimate": false
+    },
+    {
+      "group": "token_replay",
+      "name": "v2_reuse_across_arguments",
+      "reachedExecution": false,
+      "passed": true,
+      "detail": "审批令牌校验失败",
+      "status": "FAILED",
+      "legitimate": false
+    },
+    {
+      "group": "control",
+      "name": "legitimate_v2_approved_write",
+      "reachedExecution": true,
+      "passed": true,
+      "detail": "completed",
+      "status": "COMPLETED",
+      "legitimate": true
+    }
+  ]
+}

@@ -1,0 +1,70 @@
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.139.0
+    container_name: kylinops-otel-collector
+    command: ["--config=/etc/otelcol/config.yml"]
+    volumes:
+      - ../observability/otel-collector.yml:/etc/otelcol/config.yml:ro
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+      - "8889:8889"
+    depends_on:
+      - tempo
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  tempo:
+    image: grafana/tempo:2.8.2
+    container_name: kylinops-tempo
+    command: ["-config.file=/etc/tempo/tempo.yml"]
+    volumes:
+      - ../observability/tempo.yml:/etc/tempo/tempo.yml:ro
+      - tempo-data:/var/tempo
+    ports:
+      - "3200:3200"
+      - "14317:4317"
+      - "14318:4318"
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    container_name: kylinops-prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-lifecycle"
+    volumes:
+      - ../observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      # backend job 的抓取凭据（会话 token 原文）。文件必须存在，否则 backend job 每次
+      # 抓取都报错；仓库里放的是占位串，起栈后用登录得到的 token 覆盖即可，无需 reload。
+      # 运行期登录 token 放在仓库忽略的 .secrets，避免把会话凭据写进 tracked 文件。
+      - ../../.secrets/backend-scrape-token:/etc/prometheus/backend-scrape-token:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9092:9090"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  grafana:
+    image: grafana/grafana:12.1.1
+    container_name: kylinops-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_DEFAULT_THEME: dark
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ../observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+      - tempo
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  tempo-data:
+  prometheus-data:
+  grafana-data:

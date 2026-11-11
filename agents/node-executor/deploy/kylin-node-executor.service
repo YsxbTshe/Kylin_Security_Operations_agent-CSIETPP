@@ -1,0 +1,62 @@
+[Unit]
+Description=Kylin SafeOps Node Executor
+After=network.target
+
+[Service]
+Type=simple
+User=kylin-agent
+Group=kylin-agent
+WorkingDirectory=/opt/kylin-security-ops-agent
+ExecStart=/opt/kylin-security-ops-agent/kylin-node-executor
+Restart=always
+RestartSec=5
+
+# --- 最小权限沙箱加固（受限执行环境）---
+# 本进程永不持有特权：只读工具以 kylin-agent 直接执行，需要特权的写操作经
+# kylin-privhelper（ADR-002）。因此这里可以显式打开 NoNewPrivileges——
+# 此前为了给 sudo 留提权路径而刻意不设它，但 RestrictSUIDSGID / LockPersonality /
+# RestrictRealtime / ProtectKernelModules 这些 seccomp 类选项本就会隐式打开它，
+# 那条「留给 sudo」的路其实从未存在过。
+#
+# 排查提示：systemctl show -p NoNewPrivileges 只回显显式配置值，
+# /proc/PID/status 的 NoNewPrivs 才是生效值。
+NoNewPrivileges=true
+# 演示目录 /tmp/aiops-demo-logs 需与宿主机共享 /tmp，故不设 PrivateTmp。
+ProtectSystem=full
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+# 显式声明运行期可写目录（证书、会话状态、离线审计缓冲、回滚备份与演示目录）。
+# 演示目录已改为 root 属主、由特权助手写入；Node Executor 只读它们做 plan/verify，不再需要写权限。
+ReadWritePaths=/var/lib/kylin-node-executor /opt/kylin-security-ops-agent
+# journalctl 读取全量日志靠组成员身份，不需要任何特权方案。
+# 不加这条时，非 root 的 Agent 只能看到自己进程的日志，日志诊断工具形同虚设。
+SupplementaryGroups=systemd-journal
+
+# Sensitive values (KYLIN_ENROLLMENT_TOKEN, etc.) must be provided via
+# /etc/kylin-node-executor.env (mode 0600, owned by kylin-agent). Never commit
+# the real token into the repository or this unit file. See
+# kylin-node-executor.env.example for required keys.
+EnvironmentFile=/etc/kylin-node-executor.env
+Environment=KYLIN_NODE_ID=node-kylin-01
+Environment=KYLIN_CLUSTER_NAME=demo-cluster
+Environment=KYLIN_GRPC_ENROLL_ADDRESS=127.0.0.1:9091
+Environment=KYLIN_GRPC_CONTROL_ADDRESS=127.0.0.1:9090
+Environment=KYLIN_NODE_EXECUTOR_CERT_DIR=/var/lib/kylin-node-executor/certs
+Environment=KYLIN_EXECUTION_USER=kylin-agent
+Environment=KYLIN_PRIVHELPER_SOCKET=/run/kylin-privhelper/helper.sock
+# 只读地读同一份 root 持有的清理配置，好让 kylin.cleanup.plan 的预览与助手侧
+# 实际会执行的范围一致。强制点在助手侧：daemon 这份读错了只会让 plan 更严，
+# 改不了助手允许清理的目录（配置文件是 root 属主，kylin-agent 写不了）。
+Environment=KYLIN_CLEANUP_CONFIG=/etc/kylin-privhelper/cleanup.conf
+Environment=KYLIN_ALLOWED_SERVICES=business-service,nginx,sshd
+Environment=KYLIN_ALLOWED_BLOCK_SCOPES=ingress
+Environment=KYLIN_MAX_BLOCK_DURATION_MINUTES=60
+Environment=KYLIN_MAX_LOG_LINES=200
+
+[Install]
+WantedBy=multi-user.target

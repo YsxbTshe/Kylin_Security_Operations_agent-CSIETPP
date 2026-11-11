@@ -1,0 +1,300 @@
+syntax = "proto3";
+
+package kylin.nodeexecutor.v2;
+
+option java_multiple_files = true;
+option java_package = "com.superskidder.kylinops.backend.nodeexecutor.v2";
+option java_outer_classname = "NodeExecutorControlV2Proto";
+option go_package = "gitee.com/SuperSkidder/kylin-security-ops-agent/agents/node-executor/internal/controlstream/proto/v2;nodeexecutorv2";
+
+import "google/protobuf/timestamp.proto";
+
+service NodeExecutorControlService {
+  rpc EnrollNode(EnrollNodeRequest) returns (EnrollNodeResponse);
+  rpc ControlStream(stream ControlStreamRequest) returns (stream ControlStreamResponse);
+  rpc ArtifactStream(stream ArtifactStreamRequest) returns (ArtifactStreamResponse);
+}
+
+enum ExecutionMode {
+  EXECUTION_MODE_UNSPECIFIED = 0;
+  EXECUTION_MODE_PLAN = 1;
+  EXECUTION_MODE_CAUTIOUS = 2;
+  EXECUTION_MODE_AUTO = 3;
+}
+
+enum RiskCode {
+  RISK_CODE_UNSPECIFIED = 0;
+  RISK_CODE_R0 = 1;
+  RISK_CODE_R1 = 2;
+  RISK_CODE_R2 = 3;
+  RISK_CODE_R3 = 4;
+  RISK_CODE_R4 = 5;
+  RISK_CODE_R5 = 6;
+}
+
+enum InvocationProtocolStatus {
+  INVOCATION_PROTOCOL_STATUS_UNSPECIFIED = 0;
+  INVOCATION_PROTOCOL_STATUS_QUEUED = 1;
+  INVOCATION_PROTOCOL_STATUS_RUNNING = 2;
+  INVOCATION_PROTOCOL_STATUS_SUCCEEDED = 3;
+  INVOCATION_PROTOCOL_STATUS_FAILED = 4;
+  INVOCATION_PROTOCOL_STATUS_REJECTED = 5;
+  INVOCATION_PROTOCOL_STATUS_CANCELLED = 6;
+  INVOCATION_PROTOCOL_STATUS_UNKNOWN = 7;
+}
+
+enum AckKind {
+  ACK_KIND_UNSPECIFIED = 0;
+  ACK_KIND_RECEIVED = 1;
+  ACK_KIND_DUPLICATE = 2;
+}
+
+enum LockMode {
+  LOCK_MODE_UNSPECIFIED = 0;
+  LOCK_MODE_READ_SHARED = 1;
+  LOCK_MODE_WRITE_EXCLUSIVE = 2;
+}
+
+message EnrollNodeRequest {
+  string enrollment_token = 1;
+  string tenant_id = 2;
+  string node_id = 3;
+  string hostname = 4;
+  string machine_id = 5;
+  string executor_version = 6;
+  string csr_pem = 7;
+}
+
+message EnrollNodeResponse {
+  bool accepted = 1;
+  string rejection_code = 2;
+  string message = 3;
+  string node_certificate_pem = 4;
+  string node_ca_certificate_pem = 5;
+  google.protobuf.Timestamp certificate_expires_at = 6;
+  string certificate_serial_number = 7;
+}
+
+message ControlStreamResponse {
+  uint32 protocol_version = 1;
+  uint64 sequence = 2;
+  google.protobuf.Timestamp sent_at = 3;
+  oneof payload {
+    SubmitInvocation submit = 10;
+    CancelInvocation cancel = 11;
+    ReconcileInvocations reconcile = 12;
+    ExecutorConfigUpdate config_update = 13;
+    VerificationKeysetUpdate keyset_update = 14;
+  }
+}
+
+message ControlStreamRequest {
+  uint32 protocol_version = 1;
+  uint64 sequence = 2;
+  google.protobuf.Timestamp sent_at = 3;
+  oneof payload {
+    InvocationAck ack = 10;
+    InvocationProgress progress = 11;
+    InvocationResult result = 12;
+    NodeHeartbeat heartbeat = 13;
+    NodeCapabilities capabilities = 14;
+    ReconcileResult reconcile_result = 15;
+  }
+}
+
+message SubmitInvocation {
+  string tenant_id = 1;
+  string run_id = 2;
+  string agent_instance_id = 3;
+  string handoff_id = 4;
+  string tool_invocation_id = 5;
+  string execution_attempt_id = 6;
+  string node_id = 7;
+  string tool_id = 8;
+  string tool_version = 9;
+  string canonical_arguments_json = 10;
+  bytes arguments_sm3 = 11;
+  bytes input_schema_sm3 = 12;
+  bytes output_schema_sm3 = 13;
+  bytes grant_sm3 = 14;
+  bytes tool_catalog_sm3 = 15;
+  RiskCode risk_code = 16;
+  ExecutionMode execution_mode = 17;
+  bool read_only = 18;
+  uint64 lock_version = 19;
+  repeated ResourceLock resource_locks = 20;
+  ApprovalToken approval_token = 21;
+  google.protobuf.Timestamp deadline = 22;
+  string traceparent = 23;
+}
+
+message ResourceLock {
+  string canonical_resource = 1;
+  LockMode mode = 2;
+}
+
+message ApprovalClaim {
+  uint32 version = 1;
+  string tenant_id = 2;
+  string run_id = 3;
+  string agent_instance_id = 4;
+  string agent_invocation_id = 5;
+  string tool_invocation_id = 6;
+  string execution_attempt_id = 7;
+  string node_id = 8;
+  string tool_id = 9;
+  string tool_version = 10;
+  bytes arguments_sm3 = 11;
+  RiskCode risk_ceiling = 12;
+  ExecutionMode execution_mode = 13;
+  uint64 lock_version = 14;
+  string key_purpose = 15;
+  google.protobuf.Timestamp issued_at = 16;
+  google.protobuf.Timestamp expires_at = 17;
+}
+
+message ApprovalToken {
+  uint32 version = 1;
+  string key_id = 2;
+  ApprovalClaim claim = 3;
+  bytes sm2_der_signature = 4;
+}
+
+message CancelInvocation {
+  string tool_invocation_id = 1;
+  string execution_attempt_id = 2;
+  string reason = 3;
+}
+
+message ReconcileInvocations {
+  repeated string tool_invocation_ids = 1;
+  uint64 resume_after_node_sequence = 2;
+}
+
+message ExecutorConfigUpdate {
+  string config_version = 1;
+  bytes config_sm3 = 2;
+  bytes canonical_config_json = 3;
+  string signing_key_id = 4;
+  bytes sm2_der_signature = 5;
+}
+
+message VerificationKey {
+  string key_id = 1;
+  string purpose = 2;
+  bytes subject_public_key_info_der = 3;
+  google.protobuf.Timestamp not_before = 4;
+  google.protobuf.Timestamp not_after = 5;
+}
+
+message VerificationKeysetUpdate {
+  string keyset_version = 1;
+  repeated VerificationKey keys = 2;
+  string signed_by_key_id = 3;
+  bytes sm2_der_signature = 4;
+}
+
+message InvocationAck {
+  string tool_invocation_id = 1;
+  string execution_attempt_id = 2;
+  AckKind kind = 3;
+  google.protobuf.Timestamp persisted_at = 4;
+}
+
+message InvocationProgress {
+  string tool_invocation_id = 1;
+  string execution_attempt_id = 2;
+  uint64 progress_sequence = 3;
+  string stage = 4;
+  uint32 percent = 5;
+  string message = 6;
+}
+
+message InvocationResult {
+  string tool_invocation_id = 1;
+  string execution_attempt_id = 2;
+  InvocationProtocolStatus status = 3;
+  string structured_result_json = 4;
+  bytes result_sm3 = 5;
+  string error_code = 6;
+  string message = 7;
+  bool retryable = 8;
+  string diagnostic_stdout = 9;
+  string diagnostic_stderr = 10;
+  repeated ArtifactReference artifacts = 11;
+  google.protobuf.Timestamp completed_at = 12;
+}
+
+message ArtifactReference {
+  string artifact_id = 1;
+  string file_name = 2;
+  string content_type = 3;
+  uint64 size_bytes = 4;
+  bytes sm3 = 5;
+}
+
+message NodeHeartbeat {
+  string tenant_id = 1;
+  string node_id = 2;
+  string executor_version = 3;
+  string protocol_version = 4;
+  string tool_catalog_digest = 5;
+  string native_guard_status = 6;
+  google.protobuf.Timestamp native_guard_observed_at = 7;
+  uint32 running_invocations = 8;
+  uint64 last_control_plane_sequence = 9;
+  uint64 last_node_sequence = 10;
+  // 本机四探针明细（overall / items[]），与 native_guard_status 同一采集快照。
+  string native_guard_json = 11;
+}
+
+message InstalledTool {
+  string tool_id = 1;
+  string tool_version = 2;
+  string implementation_digest = 3;
+  bool healthy = 4;
+  string health_message = 5;
+}
+
+message NodeCapabilities {
+  string tenant_id = 1;
+  string node_id = 2;
+  string executor_version = 3;
+  repeated string supported_protocol_versions = 4;
+  repeated InstalledTool installed_tools = 5;
+}
+
+message ReconciledInvocation {
+  string tool_invocation_id = 1;
+  string execution_attempt_id = 2;
+  InvocationProtocolStatus status = 3;
+  InvocationResult terminal_result = 4;
+}
+
+message ReconcileResult {
+  repeated ReconciledInvocation invocations = 1;
+  uint64 last_control_plane_sequence = 2;
+  uint64 last_node_sequence = 3;
+}
+
+message ArtifactStreamRequest {
+  string tenant_id = 1;
+  string run_id = 2;
+  string agent_instance_id = 3;
+  string tool_invocation_id = 4;
+  string artifact_id = 5;
+  string file_name = 6;
+  string content_type = 7;
+  uint64 offset = 8;
+  bytes data = 9;
+  bool finish = 10;
+}
+
+message ArtifactStreamResponse {
+  bool accepted = 1;
+  string error_code = 2;
+  string message = 3;
+  string artifact_id = 4;
+  uint64 size_bytes = 5;
+  bytes sm3 = 6;
+}

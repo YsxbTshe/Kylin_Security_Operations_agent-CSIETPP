@@ -1,0 +1,30 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # Backend control plane (Spring Boot Actuator). Also surfaces Kylin host-agent metrics
+  # (kylin_node_executor_*) that the daemon pushes to the backend over gRPC.
+  - job_name: backend
+    metrics_path: /actuator/prometheus
+    # 同 deploy/observability/prometheus.yml：actuator 除 health/info 外要求携带凭据。
+    # credentials_file 的内容是平台登录返回的 token 原文（单行、不带 "Bearer " 前缀）；
+    # 它是会过期的会话 token，重写文件即可换新，Prometheus 每次抓取都会重新读。
+    authorization:
+      type: Bearer
+      credentials_file: /etc/prometheus/backend-scrape-token
+    static_configs:
+      - targets: ["host.docker.internal:8080"]
+        labels: { instance: "backend-155" }
+
+  # 155 control-plane host OS metrics.
+  - job_name: node-155
+    static_configs:
+      - targets: ["node-exporter:9100"]
+        labels: { instance: "control-plane-155" }
+
+  # Kylin (loongarch64) host OS metrics via reverse SSH tunnel (Kylin :9100 -> 155 :9101).
+  - job_name: kylin-node
+    static_configs:
+      - targets: ["host.docker.internal:9101"]
+        labels: { instance: "kylin-loongarch" }

@@ -1,0 +1,67 @@
+[Unit]
+Description=Kylin Security Ops Privilege Helper
+Documentation=file:///opt/kylin-security-ops-agent/docs/ADR-002
+# 助手必须先于 Agent 就绪：Agent 的写操作全部依赖它，助手不在时写操作一律失败
+# （这是刻意的 fail-closed，不会退回本地执行）。
+Before=kylin-node-executor.service
+
+[Service]
+Type=simple
+# 本进程是系统里唯一持有 root 的组件，因此刻意保持极小：不连网络、不接触 LLM、
+# 不加载插件、不解析控制面下发的任何数据。它只监听一个 unix socket，
+# 只认识一张固定的「工具 → 特权操作」映射表。详见 ADR-002。
+User=root
+ExecStart=/opt/kylin-security-ops-agent/kylin-privhelper
+Restart=always
+RestartSec=2
+
+# --- 加固 ---
+# 助手是 root，所以这里的每一条都比 Agent 侧更要紧。
+# 它不需要网络，直接掐断整个网络命名空间之外的访问；systemctl 与 firewall-cmd
+# 走的是本地 D-Bus（AF_UNIX），不受 AF_INET 限制影响。
+RestrictAddressFamilies=AF_UNIX
+# 助手要以 root 写演示目录、回滚存储（清理归档/截断/回滚）与审批令牌消费台账，
+# 因此 strict + 精确 ReadWritePaths：除下列目录外整个文件系统只读。
+# 不设 PrivateTmp——清理目标之一在 /tmp，私有 /tmp 会隔离它。
+# /var/lib/kylin-privhelper 同时覆盖 rollback/ 与 approval-ledger/ 两个子目录；
+# 收窄这一条会让助手启动即失败（台账打不开 = fail-closed），这是刻意的。
+ProtectSystem=strict
+ProtectHome=true
+# /tmp 在麒麟 V11 上是 tmpfs，重启后 /tmp/aiops-demo-logs 会消失。
+# 路径前的 '-' 让缺目录时跳过该条，而不是 systemd 226/NAMESPACE 死循环。
+# 目录本身由随包发布的 tmpfiles 配置在开机早期重建，见 kylin-privhelper.tmpfiles。
+ReadWritePaths=/var/lib/kylin-privhelper /var/log/aiops-demo -/tmp/aiops-demo-logs
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+# socket 建在 RuntimeDirectory（/run/kylin-privhelper，随重启清空）下：
+# strict 模式下 /run 本身不可写，socket 必须落在 RuntimeDirectory 里。
+RuntimeDirectory=kylin-privhelper
+RuntimeDirectoryMode=0755
+# 助手自己就是 root，无需 sudo，也无需保留提权能力。
+# 注意：NoNewPrivileges 对 root 进程不影响它执行 systemctl/firewall-cmd。
+NoNewPrivileges=true
+
+Environment=KYLIN_PRIVHELPER_CONFIG=/etc/kylin-privhelper/allow.conf
+# 清理作用域与判据阈值（root 属主）。文件缺失或不合格时助手照常启动，但清理会
+# fail-closed 回退到内置的两个演示目录，并在 journal 里留一行警告——不会静默放宽。
+# 往 cleanup_allowed_dirs 里加目录时，上面的 ReadWritePaths 必须同步加同一个目录，
+# 否则 ProtectSystem=strict 会让助手拿到 EROFS：配置看起来生效了，执行却全失败。
+Environment=KYLIN_CLEANUP_CONFIG=/etc/kylin-privhelper/cleanup.conf
+Environment=KYLIN_PRIVHELPER_APPROVAL_PUB=/etc/kylin-privhelper/approval.pub
+Environment=KYLIN_PRIVHELPER_APPROVAL_KEY_ID=approval-1
+Environment=KYLIN_PRIVHELPER_PEER_USER=kylin-agent
+Environment=KYLIN_PRIVHELPER_SOCKET=/run/kylin-privhelper/helper.sock
+Environment=KYLIN_PRIVHELPER_ROLLBACK_STORE=/var/lib/kylin-privhelper/rollback
+# 已消费审批令牌的持久化台账（root-only，目录 0700 / 日志 0600）。
+# 它必须跨助手重启存活：否则「一次性消费」只是进程内的说法，重启就会在令牌
+# 5 分钟 TTL 内重开重放窗口。目录打不开时助手启动即失败。
+Environment=KYLIN_PRIVHELPER_APPROVAL_LEDGER=/var/lib/kylin-privhelper/approval-ledger
+
+[Install]
+WantedBy=multi-user.target
