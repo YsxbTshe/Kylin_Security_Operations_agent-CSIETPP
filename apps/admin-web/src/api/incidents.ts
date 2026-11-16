@@ -1,6 +1,6 @@
 import { getData, postData } from './http'
 
-/** 安全事件响应闭环（决赛计划 F）。 */
+/** 安全事件响应闭环。 */
 export interface IncidentSummary {
   id: string
   title: string

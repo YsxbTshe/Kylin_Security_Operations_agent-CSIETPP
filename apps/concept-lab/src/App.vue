@@ -17,7 +17,7 @@ const scenes = [
   { id: 'access', label: '权限策略', eyebrow: '主机组与细粒度授权', icon: 'access', component: AccessStudio },
   { id: 'memory', label: '记忆管理', eyebrow: '记忆生命周期与召回', icon: 'memory', component: MemoryLab },
   { id: 'agents', label: 'Agent 编排', eyebrow: 'Skills 与多 Agent 调度', icon: 'agent', component: AgentOrchestration },
-  { id: 'roadmap', label: '四周路线图', eyebrow: '决赛交付安排', icon: 'roadmap', component: RoadmapExplorer },
+  { id: 'roadmap', label: '四周路线图', eyebrow: '四周迭代计划', icon: 'roadmap', component: RoadmapExplorer },
 ]
 
 const activeId = ref('task')
@@ -39,7 +39,7 @@ const choose = (id) => {
           <span>{{ scene.label }}</span>
         </button>
       </nav>
-      <div class="rail-foot"><small>决赛交互原型 · v0.1</small></div>
+      <div class="rail-foot"><small>运维交互原型 · v0.1</small></div>
     </aside>
 
     <main class="main-stage">
@@ -49,7 +49,7 @@ const choose = (id) => {
         </div>
         <div class="topbar-meta">
           <span class="status-pill">演示系统在线</span>
-          <span class="clock-chip">决赛交互原型</span>
+          <span class="clock-chip">运维交互原型</span>
         </div>
       </header>
       <section class="view-host"><component :is="active.component" /></section>

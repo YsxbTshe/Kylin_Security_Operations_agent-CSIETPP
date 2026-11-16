@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Seed a compact, truthful and repeatable finals demonstration dataset."""
+"""Seed a compact, truthful and repeatable project demonstration dataset."""
 
 from __future__ import annotations
 
@@ -24,17 +24,17 @@ SSH_BASE = [
 
 DOCUMENTS = [
     {
-        "title": "决赛演示：业务服务安全重启规范",
+        "title": "项目演示：业务服务安全重启规范",
         "sourceType": "DEMO_VERIFIED",
         "content": (
-            "business-service 是决赛演示专用 systemd 服务。读取状态使用 kylin.service.status，"
+            "business-service 是项目演示专用 systemd 服务。读取状态使用 kylin.service.status，"
             "属于只读操作；重启使用 kylin.service.restart，风险为 R3，必须由第二人审批。"
             "发起人不得自批。审批令牌由控制面使用 SM2-with-SM3 签发，节点 privhelper "
             "只持公钥并逐字段复核，令牌一次性消费。"
         ),
     },
     {
-        "title": "决赛演示：麒麟节点安全姿态",
+        "title": "项目演示：麒麟节点安全姿态",
         "sourceType": "DEMO_VERIFIED",
         "content": (
             "受纳管节点为银河麒麟 V11 aarch64。Native Guard 采集 KYSEC、SELinux、auditd "
@@ -42,7 +42,7 @@ DOCUMENTS = [
         ),
     },
     {
-        "title": "决赛演示：模型与执行权边界",
+        "title": "项目演示：模型与执行权边界",
         "sourceType": "DEMO_VERIFIED",
         "content": (
             "模型负责理解目标和提出工具调用，不持有 root 权限、审批签发私钥或通用 shell。"
@@ -51,7 +51,7 @@ DOCUMENTS = [
         ),
     },
     {
-        "title": "决赛演示：审计与哈希链",
+        "title": "项目演示：审计与哈希链",
         "sourceType": "DEMO_VERIFIED",
         "content": (
             "Agent run 的关键事件按顺序写入 SM3 哈希链。每个事件哈希覆盖前序哈希与规范化载荷。"
@@ -59,7 +59,7 @@ DOCUMENTS = [
         ),
     },
     {
-        "title": "决赛演示：安全事件闭环",
+        "title": "项目演示：安全事件闭环",
         "sourceType": "DEMO_VERIFIED",
         "content": (
             "SYNTHETIC 告警可转换为事件，经过研判后发起 CAUTIOUS 受控处置任务。"
@@ -135,7 +135,7 @@ def seed_node_files() -> None:
         ssh(
             port,
             "sudo install -d -m 0755 -o root -g root /var/log/aiops-demo /tmp/aiops-demo-logs; "
-            f"printf 'finals-demo node-{index} normal service log\\n' | "
+            f"printf 'project-demo node-{index} normal service log\\n' | "
             f"sudo tee /var/log/aiops-demo/business-service-node-{index}.log >/dev/null; "
             "sudo touch -d '45 days ago' /tmp/aiops-demo-logs/expired-demo.log; "
             "sudo systemctl restart business-service",
@@ -193,7 +193,7 @@ def main() -> int:
             "/api/v1/incidents/intake",
             "POST",
             {
-                "title": "决赛演示：node-kylin-01 异常登录",
+                "title": "项目演示：node-kylin-01 异常登录",
                 "severity": "HIGH",
                 "category": "AUTH_ANOMALY",
                 "sourceIp": "203.0.113.66",

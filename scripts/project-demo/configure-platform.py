@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Idempotently configure the finals backend with real model and RAG services."""
+"""Idempotently configure the demonstration backend with real model and RAG services."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from demo_lib import DemoApi, REPO_ROOT, data, load_env, require
 def llm_payload(env: dict[str, str], model: str, enabled: bool) -> dict[str, object]:
     return {
         "providerType": "OPENAI_COMPATIBLE",
-        "groupName": "决赛演示",
+        "groupName": "项目演示",
         "baseUrl": env["SILICONFLOW_BASE_URL"],
         "apiKey": env["SILICONFLOW_API_KEY"],
         "model": model,
@@ -96,7 +96,7 @@ def main() -> int:
         "elasticsearchIndex": "kylinops-rag-chunks",
         "redisEnabled": False,
         "redisBaseUrl": "127.0.0.1:6379",
-        "redisPrefix": "kylinops-finals",
+        "redisPrefix": "kylinops-demo",
         "rerankerEnabled": True,
         "rerankerBaseUrl": env["SILICONFLOW_BASE_URL"],
         "rerankerApiKey": env["SILICONFLOW_API_KEY"],

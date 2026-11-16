@@ -65,7 +65,7 @@ fi
 
 # ---------- 3. 前端 npm ----------
 if have cyclonedx-npm; then
-  for a in admin-web dashboard-screen finals-concept-lab; do
+  for a in admin-web dashboard-screen concept-lab; do
     echo "==> [npm] apps/$a"
     ( cd "$ROOT/apps/$a" && npm ci --ignore-scripts )
     cyclonedx-npm \

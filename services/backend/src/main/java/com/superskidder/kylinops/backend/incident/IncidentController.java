@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 安全事件响应闭环 HTTP 接口（决赛计划 F）。读操作需 incident:read，处置需 incident:respond。
+ * 安全事件响应闭环 HTTP 接口。读操作需 incident:read，处置需 incident:respond。
  * 旧 SafeOps 处置任务链路（triage → host task）已随 Java 侧旧执行链路一并下线。
  */
 @RestController

@@ -15,7 +15,7 @@ scrape_configs:
       type: Bearer
       credentials_file: /etc/prometheus/backend-scrape-token
     static_configs:
-      # 决赛多机演示：Ubuntu 控制面的 REST 通过宿主机 18118 转发。
+      # 多机部署验证：Ubuntu 控制面的 REST 通过宿主机 18118 转发。
       - targets: ["host.docker.internal:18118"]
 
   - job_name: host-agent

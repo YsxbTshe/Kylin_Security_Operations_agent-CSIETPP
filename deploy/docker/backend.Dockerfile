@@ -1,7 +1,7 @@
 # 控制面后端镜像（多阶段：Maven 构建 → JRE 运行）。
 #
 # 构建上下文是 services/backend/，不是仓库根目录——见 stack.yml 的 build.context。
-# 仓库里没有 mvnw/mvn wrapper，所以构建阶段直接用官方 maven 镜像，评委机器上
+# 仓库里没有 mvnw/mvn wrapper，所以构建阶段直接用官方 maven 镜像，部署主机上
 # 不需要预装 JDK 或 Maven。
 #
 # 单独构建（一般不用，交给 docker compose build backend）：

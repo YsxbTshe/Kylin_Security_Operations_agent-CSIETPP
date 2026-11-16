@@ -9,7 +9,7 @@ import java.util.Locale;
 import org.springframework.stereotype.Component;
 
 /**
- * ABAC 判定引擎（决赛计划 E）。纯函数：给定候选策略与请求，得出 ALLOW/DENY。
+ * ABAC 判定引擎。纯函数：给定候选策略与请求，得出 ALLOW/DENY。
  *
  * 判定规则（安全优先）：
  *  1. 只考虑「主体匹配 ∧ 资源类型匹配 ∧ 资源模式匹配 ∧ 动作匹配 ∧ 条件满足」的策略；

@@ -4,7 +4,7 @@ import java.time.Duration;
 import java.time.Instant;
 
 /**
- * Native Guard 姿态的新鲜度判据（决赛计划 G：结构化 PolicyContext + 过期/UNKNOWN 拒绝）。
+ * Native Guard 姿态的新鲜度判据。
  *
  * 平台对高危写操作的放行，不能建立在「不知道目标主机安全姿态」之上。姿态从未上报
  * （UNKNOWN）或上报过旧（STALE）时，R3 以上动作必须 fail-safe 拒绝，而不是像旧逻辑那样

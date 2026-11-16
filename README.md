@@ -1,15 +1,15 @@
 # 麒麟安全智能运维 Agent
 
-面向麒麟操作系统的安全智能运维 Agent（"软件杯"赛题 1 · A 组）。系统以"感知—推理决策—安全护栏"三层架构，把自然语言运维意图转化为**经策略校验、人工审批、端侧最终拒绝权**约束的受控工具调用，并对全链路做 SM3 哈希链审计与分布式追踪。
+本大创项目面向银河麒麟环境的日常安全运维，重点研究如何把自然语言提出的诊断与处置需求转化为可复核的系统操作。系统以"感知—推理决策—安全护栏"三层架构，把自然语言运维意图转化为**经策略校验、人工审批、端侧最终拒绝权**约束的受控工具调用，并对全链路做 SM3 哈希链审计与分布式追踪。
 
-> 材料口径以 `docs/ppt/`（官方赛题解析）为最终依据；逐条取证的事实基线见 `docs/08-决赛冲刺/决赛事实基线与证据索引.md`。
+> 功能范围、测试条件和部署步骤见[项目文档](docs/README.md)。
 > 本 README 与全部对外文档受 `scripts/verify-doc-consistency.py` 门禁约束：引用的代码文件必须存在，已删除能力的名词不得复活。
 
 ## 核心能力
 
 - **OS 环境深度感知 + MCP 工具体系**：签名工具清单 `tool-packages/core-node-tools/manifest.json` 注册 **46 个工具**（32 只读 / 14 写，其中 10 个 `alwaysRequireApproval`），覆盖进程、网络、日志、磁盘、服务、防火墙、软件包、账号、麒麟安全开关等采集与受控变更，以及隔离沙箱内的 workspace 脚本能力。节点侧 MCP Server（`server.go`，protocolVersion `2024-11-05`）实现 `initialize` / `tools/list` / `tools/call`。
-- **安全意图校验 + 最小权限执行**：PolicyEngine 风险分级 R0–R5（对应官方"只读 / 可逆 / 不可逆 / 关键"四级）+ Prompt 注入硬规则（先于可配置 DSL，不可被绕过）+ `IntentAlignmentGuard` 意图一致性护栏 + 资源级 ABAC（工具维度与主机维度串联，default-deny）；审批令牌为 **SM2-with-SM3 非对称签名**，后端私钥签发、端侧公钥验真、TTL 5 分钟。
-- **特权分离**：写操作下沉 root 特权助手 **privhelper**（unix socket + `SO_PEERCRED` + 固定操作映射表 + 自解析参数 + 独立验令牌 + root 属主 `allow.conf`）；Node Executor 以非 root 运行，宿主机侧无通用 shell（脚本仅在隔离沙箱内运行），路径 / argv 白名单 + systemd 沙箱。见 [ADR-002](docs/01-架构设计/ADR-002-特权分离与审批下沉.md)。
+- **安全意图校验 + 最小权限执行**：PolicyEngine 风险分级 R0–R5（按运维操作分为只读、可逆、不可逆和关键四类）+ Prompt 注入硬规则（先于可配置 DSL，不可被绕过）+ `IntentAlignmentGuard` 意图一致性护栏 + 资源级 ABAC（工具维度与主机维度串联，default-deny）；审批令牌为 **SM2-with-SM3 非对称签名**，后端私钥签发、端侧公钥验真、TTL 5 分钟。
+- **特权分离**：写操作下沉 root 特权助手 **privhelper**（unix socket + `SO_PEERCRED` + 固定操作映射表 + 自解析参数 + 独立验令牌 + root 属主 `allow.conf`）；Node Executor 以非 root 运行，宿主机侧无通用 shell（脚本仅在隔离沙箱内运行），路径 / argv 白名单 + systemd 沙箱。见[软件功能设计文档](docs/06-提交文档/02-软件功能设计文档.md)。
 - **抗注入 + 推理链路溯源**：审计事件溯源 + SM3 哈希链（`event_hash = SM3(prev_hash ‖ 规范化载荷)`，genesis ZERO_HASH），在线 `GET /api/v2/agent-runtime/runs/{runId}/chain` 可校验链完整或指出断裂点（`AgentRunEventRepository.java`）；全链路 W3C `traceparent` + OpenTelemetry → Tempo → Grafana。
 - **受控 Agent 循环**：执行模式 PLAN / CAUTIOUS / AUTO + **DispatchGate 十二步门禁**（见下）+ 五类预算上限（模型调用数 / 工具调用数 / 墙钟 / 写次数 / 连续停滞轮数，`AgentRoundExecutor.java`）+ 证据指纹停滞判据 + 断点续跑（`RunCheckpointService.java`）+ 模型全不可用时降级为确定性只读剧本（`DeterministicFallbackPlaybook.java`）+ RAG 三通道 RRF 检索注入并写入审计。
 
@@ -62,16 +62,16 @@ apps/dashboard-screen ─┤────────────────▶ 
 ```text
 apps/admin-web/           管理端前端（Vue 3 + Vite，25 个视图）
 apps/dashboard-screen/    数据大屏前端（Vue 3 + ECharts）
-apps/finals-concept-lab/  交互概念原型（Vite + Three.js，对后端零调用，不参与构建与部署）
+apps/concept-lab/  交互概念原型（Vite + Three.js，对后端零调用，不参与构建与部署）
 services/backend/         Spring Boot 后端（Java 17，REST + SSE + gRPC 控制面）
 agents/node-executor/     Go 麒麟节点安全执行器（mTLS ControlStream 客户端 + privhelper）
-agents/workspace-runner/  Go 沙箱脚本执行器（当前无部署产物，见"已知边界"）
+agents/workspace-runner/  Go 沙箱脚本执行器（当前无部署产物，见下文的运行边界）
 proto/v2/                 Node Executor gRPC V2 权威协议（Buf 生成 Java / Go）
 tool-packages/            签名 ToolPackageManifest schema、源清单与多端投影
 bench/                    对抗电池 / RAG / 记忆基准的用例与结果
 deploy/                   发布脚本 + 可观测演示栈（OTel / Tempo / Prometheus / Grafana）
 scripts/                  本地验证、文档一致性与安全扫描脚本
-docs/                     架构 / 部署 / 项目状态 / 后续计划 / 评估 / 提交文档（docs/ppt 为权威依据）
+docs/                     功能需求 / 技术设计 / 使用说明 / 测试 / 部署
 ```
 
 ## 端口
@@ -137,13 +137,9 @@ CI（`.github/workflows/`）：`backend-tests`（H2 单测 + PostgreSQL/pgvector
 ## 文档入口
 
 - 文档总览：`docs/README.md`
-- 架构决策：[ADR-001 计划门控](docs/01-架构设计/ADR-001-以计划门控替代DAG中心编排.md)、[ADR-002 特权分离](docs/01-架构设计/ADR-002-特权分离与审批下沉.md)、[ADR-003 事件响应与资源级授权](docs/01-架构设计/ADR-003-事件响应闭环与资源级授权与专家注册表.md)
-- 现行执行架构：`docs/01-架构设计/Agent执行架构-现状与设计差距.md`
-- 新架构实施进度：`docs/03-项目状态/Agent-Runtime新架构实施进度.md`
-- 比赛提交文档（六件套）：`docs/06-提交文档/`
-- 官方赛题解析（权威依据）：`docs/ppt/`
+- 项目技术文档：`docs/06-提交文档/`
 - 版权与第三方许可：[`COPYRIGHT.md`](COPYRIGHT.md)、[`THIRD-PARTY.md`](THIRD-PARTY.md)
 
-## 比赛版边界
+## 当前验证范围
 
-聚焦单机可演示闭环。明确不做：SM2/TLCP 国密 TLS 栈、容器级沙箱 / 远端 runner fleet、企业 CA/OCSP 对接、Redis Sentinel/Cluster、Tempo/Grafana 高可用、多租户深化、生产级日志 shipper。证书链运行在标准 TLS/X.509 上（mTLS 校验只解析 Subject DN 的 CN/O，不读 SAN）；SM3 用于审计摘要与参数指纹，SM2-with-SM3 用于 V2 审批令牌与清单签名。
+当前以一套控制面和一个麒麟受管节点验证端到端流程。明确不做：SM2/TLCP 国密 TLS 栈、容器级沙箱 / 远端 runner fleet、企业 CA/OCSP 对接、Redis Sentinel/Cluster、Tempo/Grafana 高可用、多租户深化、生产级日志 shipper。证书链运行在标准 TLS/X.509 上（mTLS 校验只解析 Subject DN 的 CN/O，不读 SAN）；SM3 用于审计摘要与参数指纹，SM2-with-SM3 用于 V2 审批令牌与清单签名。

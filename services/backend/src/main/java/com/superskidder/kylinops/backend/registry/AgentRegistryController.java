@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 专家注册表 / 知识域 / Agent IAM 接口（决赛计划 R）。读需 registry:read，维护需 registry:write。
+ * 专家注册表 / 知识域 / Agent IAM 接口。读需 registry:read，维护需 registry:write。
  * /authorize 暴露 Agent 能力授权判定（fail-closed），供演示「越封套即拒」。
  */
 @RestController

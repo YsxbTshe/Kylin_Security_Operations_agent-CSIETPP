@@ -1,6 +1,6 @@
 # 可观测部署（155 后端机 + 麒麟主机）
 
-面向比赛单机演示的轻量可观测栈。Tempo/OTel 因 155 内存/磁盘预算被裁掉（见根 `deploy/observability/` 为完整演示栈）。
+面向资源受限节点的单机可观测栈。Tempo/OTel 因 155 内存/磁盘预算被裁掉（见根 `deploy/observability/` 为完整演示栈）。
 
 ## 拓扑
 

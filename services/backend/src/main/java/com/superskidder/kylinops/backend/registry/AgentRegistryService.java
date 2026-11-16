@@ -14,7 +14,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * 专家注册表 + 知识域 + Agent IAM（决赛计划 R）。
+ * 专家注册表 + 知识域 + Agent IAM。
  *
  * 提供专家 Agent 的常驻目录（CRUD/启停）与**能力授权判定** {@link #authorize}：给定专家、工具与
  * 风险，按其注册封套（allowed_tools + max_risk + enabled）做 fail-closed 判定。这是 Agent 版的最小

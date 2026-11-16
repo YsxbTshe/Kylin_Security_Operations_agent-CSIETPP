@@ -4,7 +4,7 @@ import type { ScreenDashboardResponse } from '../api/screen'
 import { highRiskCount, onlineRate, eventTone } from './shared'
 
 /**
- * 大屏三幕（决赛计划 F 旗舰演示）：态势 → 任务直播 → 证据结论。
+ * 大屏三幕：态势 → 任务直播 → 证据结论。
  * 全部消费真实聚合数据（含事件闭环板块）；离线基准数字明确标注来源、不与实时混写。
  */
 const props = defineProps<{ dashboard: ScreenDashboardResponse | null }>()

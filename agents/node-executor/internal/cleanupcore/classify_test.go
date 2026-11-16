@@ -11,8 +11,7 @@ var classifyNow = time.Date(2026, 8, 16, 12, 0, 0, 0, time.UTC)
 func daysAgo(days int) time.Time    { return classifyNow.Add(-time.Duration(days) * 24 * time.Hour) }
 func minutesAgo(mins int) time.Time { return classifyNow.Add(-time.Duration(mins) * time.Minute) }
 
-// 赛题要求「区分临时缓存、过期日志、可清理文件和关键保护文件」。
-// 这张表就是那句话的可执行版本：每一行都是一个评委可以当场问的问题。
+// 验证临时缓存、过期日志、可清理文件和关键保护文件的分类行为。
 func TestClassifyCoversTheFourRequiredCategories(t *testing.T) {
 	policy := DefaultPolicy()
 	cases := []struct {

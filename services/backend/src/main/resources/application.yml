@@ -82,7 +82,7 @@ app:
     offline-timeout-seconds: 180
     running-timeout-seconds: 120
     native-guard:
-      # 结构化姿态失败安全（决赛计划 G）：目标主机安全姿态未知或过期时，R3+ 写操作拒绝。
+      # 结构化姿态失败安全：目标主机安全姿态未知或过期时，R3+ 写操作拒绝。
       require-fresh-posture: ${HOST_AGENT_NATIVE_GUARD_REQUIRE_FRESH:true}
       posture-max-age-minutes: ${HOST_AGENT_NATIVE_GUARD_MAX_AGE_MINUTES:30}
     grpc:

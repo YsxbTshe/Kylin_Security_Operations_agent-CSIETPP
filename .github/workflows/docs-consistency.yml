@@ -1,9 +1,6 @@
 # 对外材料一致性门禁。
 #
-# 2026-08 的教训：Phase 7 重构删除整套旧执行链路后，六件套、答辩材料与被指定为
-# 「唯一事实源」的证据索引全部滞留在重构前的口径——文档说有的类、页面、迁移文件
-# 在代码里已不存在。这类问题不会被编译器、也不会被任何现有测试发现，只会在评委
-# 按文档提问时当场暴露，因此必须由 CI 兜住。
+# 检查技术文档的代码引用及已下线能力的描述。
 name: docs-consistency
 
 on:
@@ -24,7 +21,6 @@ jobs:
       - name: 校验证据锚点与对外口径
         run: python3 scripts/verify-doc-consistency.py
 
-      # 评委阅卷读的是 .docx，而历次整改都只改 .md——二进制不进 diff 视野，
-      # grep 也扫不到。这一步解包 word/document.xml 直接查正文。
-      - name: 校验六件套 .docx 正文无过期口径
+      # 解包 Word 文档，直接检查其正文。
+      - name: 校验 Word 技术文档正文
         run: bash scripts/export-submission-docx.sh --check

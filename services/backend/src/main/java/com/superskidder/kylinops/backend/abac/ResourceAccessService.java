@@ -12,7 +12,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * 资源级授权入口（ABAC，决赛计划 E）。从库中取出与主体/资源相关的策略，交给
+ * 资源级授权入口（ABAC）。从库中取出与主体/资源相关的策略，交给
  * {@link AbacPolicyEngine} 判定。与 RBAC 的全局 requirePermission 叠加使用：
  * 先过全局功能权限，再过资源级授权，二者都通过才允许对具体资源动作。
  */

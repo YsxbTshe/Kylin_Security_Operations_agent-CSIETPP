@@ -7,7 +7,7 @@ import { fetchHosts, type HostSummary } from '../api/hosts'
 import { Alert, Button, PageHeader, SectionCard, Tag } from '../ui'
 
 /**
- * 逻辑/观测拓扑（决赛计划 C，concept-lab TopologyLab 接入生产）。
+ * 逻辑/观测拓扑。
  * 2D(SVG) 与 3D(Three.js) 同源：相同的节点、边与状态色；无 WebGL 时自动降级到 2D，核心信息不丢。
  * 资产尚无 site/room/rack/uPosition，故明确称「逻辑拓扑」，不冒充物理机架视图。
  */
