@@ -25,7 +25,7 @@ const items = [
   { week: 3, lane: '安全纵深', title: 'Native 系统 Hook 观测原型', desc: '从 auditd / eBPF / LSM 方案中择实机可证的观测点，明确不做空泛拦截。', mode: 'extreme', proof: '攻击/误报/开销对照', owner: 'Security × Host' },
   { week: 3, lane: '基础合规', title: '等保三级自评证据页', desc: '控制—措施—证据—差距；数据库最小账号/TLS/备份恢复与 SBOM。', mode: 'ambitious', proof: '自评矩阵 + 一次恢复记录', owner: 'Security × DBA' },
   { week: 3, lane: '主动安全', title: '麒麟漏洞与加固复扫闭环', desc: '导入漏洞/弱配置结果，关联麒麟版本与资产上下文，经审批灰度加固、复扫并保留回滚证据。', mode: 'extreme', proof: '风险排序 + canary 修复 + 复扫残留', owner: 'Security × Host' },
-  { week: 4, lane: '冻结与演练', title: 'D-8 功能冻结 / 四级降级', desc: 'Live 智能 → Live 确定性 → 真实历史回放 → 离线视频与证据包。', mode: 'robust', proof: '断网/模型故障彩排', owner: '全组' },
+  { week: 4, lane: '冻结与演练', title: '版本冻结与降级路径验证', desc: 'Live 智能 → Live 确定性 → 真实历史回放 → 离线视频与证据包。', mode: 'robust', proof: '断网/模型故障彩排', owner: '全组' },
   { week: 4, lane: '演示增强', title: '端到端演练与专项验证', desc: '复核核心流程，以及安全、架构、基准测试和麒麟兼容性的验证证据。', mode: 'ambitious', proof: '专项验证记录', owner: 'Demo × 全组' },
   { week: 4, lane: '高限冲刺', title: '候选高限功能择优合流', desc: 'Agent Runtime / DevOps / ABAC / Native Hook / Memory / Graph 路由以证据成熟度决定登台深度。', mode: 'extreme', proof: '红黄绿 readiness gate', owner: '全组' },
 ]
