@@ -1,0 +1,90 @@
+#!/usr/bin/python3
+"""yq —— YAML 版 jq。语义对齐 kislyuk/yq（把 YAML 转成 JSON 后交给 jq），
+**不是** mikefarah/yq，因此不支持 `-i` 就地编辑与 `.a.b = 1` 那套赋值语法糖。
+
+之所以自带这一份而不是 `microdnf install yq`：UBI9 的 baseos/appstream 里没有
+yq 包，而沙箱容器 `--network=none`，构建期之外无法再取任何东西。用 jq +
+python3-pyyaml 拼出来的这版只依赖镜像里已有的两个包，可离线构建、可审阅。
+
+用法：
+    yq [jq 选项] FILTER [FILE ...]
+    -y / --yaml-output      结果再转回 YAML（默认输出 JSON）
+    不带 FILE 时从 stdin 读。多文档 YAML 会展开成 JSON 流逐个喂给 jq。
+
+刻意不做的事：`-i` 直接报错退出，而不是假装成功——沙箱里一个「看起来改了、
+其实没改」的编辑器比没有编辑器危险得多。就地编辑请用
+`python3 -c 'import yaml, ...'`。
+"""
+
+import json
+import subprocess
+import sys
+
+import yaml
+
+USAGE = "用法：yq [jq 选项] FILTER [FILE ...]（-y 输出 YAML；不支持 -i 就地编辑）"
+
+
+def parse_args(argv):
+    jq_args, files, expr = [], [], None
+    yaml_output = False
+    for arg in argv:
+        if arg in ("-y", "--yaml-output"):
+            yaml_output = True
+        elif arg in ("-i", "--in-place"):
+            sys.exit("yq: 本实现不支持 -i 就地编辑（见脚本头注释）")
+        elif arg in ("-h", "--help"):
+            sys.exit(__doc__)
+        elif arg.startswith("-") and arg != "-" and expr is None:
+            jq_args.append(arg)
+        elif expr is None:
+            expr = arg
+        else:
+            files.append(arg)
+    if expr is None:
+        sys.exit(USAGE)
+    return jq_args, expr, files, yaml_output
+
+
+def load_documents(files):
+    sources = []
+    if files:
+        for path in files:
+            with open(path, "r", encoding="utf-8") as handle:
+                sources.append(handle.read())
+    else:
+        sources.append(sys.stdin.read())
+    documents = []
+    for text in sources:
+        documents.extend(doc for doc in yaml.safe_load_all(text))
+    return documents
+
+
+def main(argv):
+    jq_args, expr, files, yaml_output = parse_args(argv)
+    try:
+        documents = load_documents(files)
+    except (OSError, yaml.YAMLError) as err:
+        sys.exit("yq: 读取 YAML 失败：%s" % err)
+
+    payload = "\n".join(json.dumps(doc, ensure_ascii=False, default=str) for doc in documents)
+    # -y 时强制 jq 紧凑输出，好按行把结果解析回 Python 对象再转 YAML。
+    args = ["jq"] + (["-c"] if yaml_output else []) + jq_args + [expr]
+    result = subprocess.run(args, input=payload, capture_output=True, text=True)
+    if result.stderr:
+        sys.stderr.write(result.stderr)
+    if result.returncode != 0:
+        return result.returncode
+
+    if not yaml_output:
+        sys.stdout.write(result.stdout)
+        return 0
+    for line in result.stdout.splitlines():
+        if not line.strip():
+            continue
+        sys.stdout.write(yaml.safe_dump(json.loads(line), allow_unicode=True, default_flow_style=False))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

@@ -1,0 +1,30 @@
+name: frontend-build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app:
+          - admin-web
+          - dashboard-screen
+    defaults:
+      run:
+        working-directory: apps/${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/${{ matrix.app }}/package-lock.json
+      - name: Install (npm ci)
+        run: npm ci
+      # `npm run build` is `vue-tsc -b && vite build`, so this is the type-check gate too.
+      - name: Type-check + build
+        run: npm run build

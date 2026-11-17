@@ -1,0 +1,63 @@
+# Lightweight observability stack for the 155 backend host (4 vCPU / ~1.6 GiB free RAM).
+# Prometheus + Grafana + a node-exporter for the 155 host itself. Tempo/OTel are intentionally
+# dropped (RAM/disk budget); the backend already aggregates Kylin host-agent metrics over gRPC
+# and exposes them at /actuator/prometheus. Kylin OS metrics arrive via a reverse SSH tunnel
+# (see deploy/observability-155/README — Prometheus job kylin-node, target host.docker.internal:9101).
+services:
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    container_name: kylinops-prometheus
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=15d"
+      - "--web.enable-lifecycle"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      # backend job 的抓取凭据（会话 token 原文）。文件必须存在，否则该 job 抓取即报错；
+      # 仓库里是占位串，部署后用平台登录返回的 token 覆盖，Prometheus 不必 reload。
+      - ./backend-scrape-token:/etc/prometheus/backend-scrape-token:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9092:9090"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    mem_limit: 512m
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    container_name: kylinops-node-exporter-155
+    restart: unless-stopped
+    command:
+      - "--path.rootfs=/host"
+    pid: host
+    volumes:
+      - /:/host:ro,rslave
+    ports:
+      - "9100:9100"
+    mem_limit: 96m
+
+  grafana:
+    image: grafana/grafana:12.1.1
+    container_name: kylinops-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-kylinops-admin}
+      GF_USERS_DEFAULT_THEME: dark
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    mem_limit: 256m
+
+volumes:
+  prometheus-data:
+  grafana-data:

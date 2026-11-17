@@ -1,0 +1,18 @@
+skill_id: kylin.ops.disk-alert-triage
+name: 磁盘告警排查
+# 申请 ORG_REVIEWED：仅使用被授权的只读工具；授予与否由审核/签名流程决定。
+trust_level: ORG_REVIEWED
+allowed_tools:
+  - kylin.workspace.bash
+  - kylin.workspace.read
+  - kylin.workspace.glob
+  - kylin.node.service.status
+required_commands:
+  - df
+  - du
+  - lsblk
+  - findmnt
+resources:
+  max_memory_mb: 256
+  max_cpu_seconds: 60
+  max_output_bytes: 1048576

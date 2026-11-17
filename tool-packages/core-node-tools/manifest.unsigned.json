@@ -1,0 +1,2783 @@
+{
+  "schemaVersion": "1.0",
+  "packageId": "kylin.core.node",
+  "version": "1.1.0",
+  "title": "Kylin Core Node Tools",
+  "description": "Platform-reviewed native tools executed by the Kylin SafeOps Node Executor.",
+  "tools": [
+    {
+      "id": "kylin.cleanup.execute",
+      "version": "1.0.0",
+      "title": "Execute cleanup",
+      "description": "Archive and truncate approved demo directories with rollback metadata",
+      "executor": "NODE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "targetDir": {
+            "type": "string",
+            "minLength": 1
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "archive",
+              "archive_then_truncate"
+            ]
+          },
+          "maxFiles": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "tool": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "rollback_id": {
+            "type": "string"
+          },
+          "backup_path": {
+            "type": "string"
+          },
+          "target_dir": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string"
+          },
+          "files": {
+            "type": "array"
+          },
+          "freed_bytes": {
+            "type": "integer"
+          },
+          "bytes_archived": {
+            "type": "integer"
+          },
+          "scanned_count": {
+            "type": "integer"
+          },
+          "skipped_count": {
+            "type": "integer"
+          },
+          "protected_count": {
+            "type": "integer"
+          },
+          "retained_count": {
+            "type": "integer"
+          },
+          "skipped": {
+            "type": "array"
+          },
+          "category_summary": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "status",
+          "target_dir"
+        ]
+      },
+      "riskFloor": "R3",
+      "readOnly": false,
+      "alwaysRequireApproval": true,
+      "directDisplay": false,
+      "resourceLocks": [
+        {
+          "template": "path:{targetDir}",
+          "mode": "WRITE_EXCLUSIVE"
+        }
+      ],
+      "timeoutSeconds": 120,
+      "maxConcurrency": 1,
+      "idempotency": {
+        "type": "NON_RETRYABLE",
+        "maxAttempts": 1
+      },
+      "reversibility": {
+        "type": "COMPENSATING",
+        "description": "Restore files from the rollback package with kylin.cleanup.rollback."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "tar"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "cleanup_execute",
+        "digest": "3419649f52e01fb9903250dbb8606aeb392de8da0e9d9d65a2054a8d12e823e2"
+      }
+    },
+    {
+      "id": "kylin.cleanup.plan",
+      "version": "1.0.0",
+      "title": "Plan cleanup",
+      "description": "Plan archive and truncate cleanup for approved demo directories",
+      "executor": "NODE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "targetDir": {
+            "type": "string",
+            "minLength": 1
+          },
+          "maxFiles": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "tool": {
+            "type": "string"
+          },
+          "target_dir": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string"
+          },
+          "candidate_count": {
+            "type": "integer"
+          },
+          "reclaim_bytes": {
+            "type": "integer"
+          },
+          "requires_approval": {
+            "type": "boolean"
+          },
+          "candidates": {
+            "type": "array"
+          },
+          "scanned_count": {
+            "type": "integer"
+          },
+          "cleanable_count": {
+            "type": "integer"
+          },
+          "protected_count": {
+            "type": "integer"
+          },
+          "retained_count": {
+            "type": "integer"
+          },
+          "protected": {
+            "type": "array"
+          },
+          "retained": {
+            "type": "array"
+          },
+          "category_summary": {
+            "type": "object"
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "policy": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "target_dir",
+          "candidate_count"
+        ]
+      },
+      "riskFloor": "R0",
+      "readOnly": true,
+      "alwaysRequireApproval": false,
+      "directDisplay": true,
+      "resourceLocks": [
+        {
+          "template": "path:{targetDir}",
+          "mode": "READ_SHARED"
+        }
+      ],
+      "timeoutSeconds": 30,
+      "maxConcurrency": 16,
+      "idempotency": {
+        "type": "IDEMPOTENT",
+        "maxAttempts": 2
+      },
+      "reversibility": {
+        "type": "NOT_APPLICABLE",
+        "description": "The tool is read-only."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "find"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "cleanup_plan",
+        "digest": "62ef16aec209d19c1a64107bef067b59fd888a955d600b42f5609fae028637c1"
+      }
+    },
+    {
+      "id": "kylin.cleanup.rollback",
+      "version": "1.0.0",
+      "title": "Rollback cleanup",
+      "description": "Restore a cleanup rollback package from rollback_id",
+      "executor": "NODE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "rollbackId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "rollbackId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "tool": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "rollback_id": {
+            "type": "string"
+          },
+          "target_dir": {
+            "type": "string"
+          },
+          "files": {
+            "type": "array"
+          },
+          "bytes_restored": {
+            "type": "integer"
+          },
+          "failed_path": {
+            "type": "string"
+          },
+          "failure_type": {
+            "type": "string"
+          },
+          "failure_message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "rollback_id"
+        ]
+      },
+      "riskFloor": "R3",
+      "readOnly": false,
+      "alwaysRequireApproval": true,
+      "directDisplay": false,
+      "resourceLocks": [
+        {
+          "template": "rollback:{rollbackId}",
+          "mode": "WRITE_EXCLUSIVE"
+        }
+      ],
+      "timeoutSeconds": 120,
+      "maxConcurrency": 1,
+      "idempotency": {
+        "type": "AT_MOST_ONCE",
+        "maxAttempts": 1
+      },
+      "reversibility": {
+        "type": "IRREVERSIBLE",
+        "description": "Restores files from a rollback package; the restore itself is not compensated."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "tar"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "cleanup_rollback",
+        "digest": "da3d28e95714e44e9bb8646fae0fdd849d6ff2aa796c90f3cd3b691a9756a654"
+      }
+    },
+    {
+      "id": "kylin.config.permissions_snapshot",
+      "version": "1.0.0",
+      "title": "Read config permissions",
+      "description": "Read key configuration file permissions",
+      "executor": "NODE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "output"
+        ]
+      },
+      "riskFloor": "R0",
+      "readOnly": true,
+      "alwaysRequireApproval": false,
+      "directDisplay": true,
+      "resourceLocks": [],
+      "timeoutSeconds": 15,
+      "maxConcurrency": 16,
+      "idempotency": {
+        "type": "IDEMPOTENT",
+        "maxAttempts": 2
+      },
+      "reversibility": {
+        "type": "NOT_APPLICABLE",
+        "description": "The tool is read-only."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "stat"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "config_permissions_snapshot",
+        "digest": "96e54f5abe8552532fcf126ceec38136d799b272b18cd671f467926b7c69face"
+      }
+    },
+    {
+      "id": "kylin.diagnosis.triage",
+      "version": "1.0.0",
+      "title": "Host triage summary",
+      "description": "Collect a read-only host triage summary",
+      "executor": "NODE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "output"
+        ]
+      },
+      "riskFloor": "R0",
+      "readOnly": true,
+      "alwaysRequireApproval": false,
+      "directDisplay": true,
+      "resourceLocks": [],
+      "timeoutSeconds": 30,
+      "maxConcurrency": 4,
+      "idempotency": {
+        "type": "IDEMPOTENT",
+        "maxAttempts": 2
+      },
+      "reversibility": {
+        "type": "NOT_APPLICABLE",
+        "description": "The tool is read-only."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "df",
+          "ps",
+          "systemctl"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "diagnosis_triage",
+        "digest": "c5aec9f1d369c12885b8d74f7a711fa51558050a0bb3b3f3df2b1d65b0542c2a"
+      }
+    },
+    {
+      "id": "kylin.disk.large_files",
+      "version": "1.0.0",
+      "title": "Find large files",
+      "description": "Find large regular files under an allowed path root",
+      "executor": "NODE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "targetDir": {
+            "type": "string",
+            "minLength": 1
+          },
+          "maxFiles": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "output"
+        ]
+      },
+      "riskFloor": "R0",
+      "readOnly": true,
+      "alwaysRequireApproval": false,
+      "directDisplay": true,
+      "resourceLocks": [
+        {
+          "template": "path:{targetDir}",
+          "mode": "READ_SHARED"
+        }
+      ],
+      "timeoutSeconds": 30,
+      "maxConcurrency": 16,
+      "idempotency": {
+        "type": "IDEMPOTENT",
+        "maxAttempts": 2
+      },
+      "reversibility": {
+        "type": "NOT_APPLICABLE",
+        "description": "The tool is read-only."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "find"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "disk_large_files",
+        "digest": "d9ff07d2d9da59c8bd7eea8168df16e8f6d0133a6474a4af230c62d94b79ca29"
+      }
+    },
+    {
+      "id": "kylin.disk.usage",
+      "version": "1.0.0",
+      "title": "Read disk usage",
+      "description": "Read disk usage",
+      "executor": "NODE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "output"
+        ]
+      },
+      "riskFloor": "R0",
+      "readOnly": true,
+      "alwaysRequireApproval": false,
+      "directDisplay": true,
+      "resourceLocks": [],
+      "timeoutSeconds": 15,
+      "maxConcurrency": 16,
+      "idempotency": {
+        "type": "IDEMPOTENT",
+        "maxAttempts": 2
+      },
+      "reversibility": {
+        "type": "NOT_APPLICABLE",
+        "description": "The tool is read-only."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "df"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "disk_usage",
+        "digest": "fcfbfa4670ed0eeab278b2ba7b36a350c271a725035dd70135aa54215bc4838c"
+      }
+    },
+    {
+      "id": "kylin.file.lsof_path",
+      "version": "1.0.0",
+      "title": "List open files",
+      "description": "List open files for an allowed path",
+      "executor": "NODE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "output"
+        ]
+      },
+      "riskFloor": "R0",
+      "readOnly": true,
+      "alwaysRequireApproval": false,
+      "directDisplay": true,
+      "resourceLocks": [
+        {
+          "template": "path:{path}",
+          "mode": "READ_SHARED"
+        }
+      ],
+      "timeoutSeconds": 15,
+      "maxConcurrency": 16,
+      "idempotency": {
+        "type": "IDEMPOTENT",
+        "maxAttempts": 2
+      },
+      "reversibility": {
+        "type": "NOT_APPLICABLE",
+        "description": "The tool is read-only."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "lsof"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "lsof_path",
+        "digest": "bc82a508b6f206cc9a4f163a086b0532f25d89c5caad033e0d87dc88f6574a68"
+      }
+    },
+    {
+      "id": "kylin.file.sm3",
+      "version": "1.0.0",
+      "title": "Read file SM3",
+      "description": "Read SM3 digest for an allowed file path",
+      "executor": "NODE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "output"
+        ]
+      },
+      "riskFloor": "R0",
+      "readOnly": true,
+      "alwaysRequireApproval": false,
+      "directDisplay": true,
+      "resourceLocks": [
+        {
+          "template": "path:{path}",
+          "mode": "READ_SHARED"
+        }
+      ],
+      "timeoutSeconds": 15,
+      "maxConcurrency": 16,
+      "idempotency": {
+        "type": "IDEMPOTENT",
+        "maxAttempts": 2
+      },
+      "reversibility": {
+        "type": "NOT_APPLICABLE",
+        "description": "The tool is read-only."
+      },
+      "nodeRequirements": {
+        "commands": []
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "file_sm3",
+        "digest": "76aaa23282a859f69c5cc99a42860c60f0422638a3b4420d924db67a3c4072e3"
+      }
+    },
+    {
+      "id": "kylin.file.stat",
+      "version": "1.0.0",
+      "title": "Read file metadata",
+      "description": "Read metadata for an allowed file path",
+      "executor": "NODE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "output"
+        ]
+      },
+      "riskFloor": "R0",
+      "readOnly": true,
+      "alwaysRequireApproval": false,
+      "directDisplay": true,
+      "resourceLocks": [
+        {
+          "template": "path:{path}",
+          "mode": "READ_SHARED"
+        }
+      ],
+      "timeoutSeconds": 15,
+      "maxConcurrency": 16,
+      "idempotency": {
+        "type": "IDEMPOTENT",
+        "maxAttempts": 2
+      },
+      "reversibility": {
+        "type": "NOT_APPLICABLE",
+        "description": "The tool is read-only."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "stat"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "file_stat",
+        "digest": "586806001877dc7300002d86ca2f0356de3bd339717cc3f40f665a0d0edc9a90"
+      }
+    },
+    {
+      "id": "kylin.firewall.block_ip",
+      "version": "1.0.0",
+      "title": "Block IP",
+      "description": "Block an IP via firewalld",
+      "executor": "NODE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "ip": {
+            "type": "string",
+            "minLength": 1
+          },
+          "scope": {
+            "type": "string",
+            "minLength": 1
+          },
+          "duration": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "ip",
+          "scope",
+          "duration"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "output"
+        ]
+      },
+      "riskFloor": "R3",
+      "readOnly": false,
+      "alwaysRequireApproval": true,
+      "directDisplay": false,
+      "resourceLocks": [
+        {
+          "template": "firewall:{ip}",
+          "mode": "WRITE_EXCLUSIVE"
+        }
+      ],
+      "timeoutSeconds": 30,
+      "maxConcurrency": 4,
+      "idempotency": {
+        "type": "AT_MOST_ONCE",
+        "maxAttempts": 1
+      },
+      "reversibility": {
+        "type": "REVERSIBLE",
+        "description": "Remove the block with kylin.firewall.unblock_ip."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "firewall-cmd"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "block_ip",
+        "digest": "be4106eac9ce83184782efb292e7594a0cb372555c3e473ec83e84e4cb7ef1b4"
+      }
+    },
+    {
+      "id": "kylin.firewall.rules",
+      "version": "1.0.0",
+      "title": "List firewall rules",
+      "description": "List firewalld public zone rules",
+      "executor": "NODE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "output"
+        ]
+      },
+      "riskFloor": "R0",
+      "readOnly": true,
+      "alwaysRequireApproval": false,
+      "directDisplay": true,
+      "resourceLocks": [],
+      "timeoutSeconds": 15,
+      "maxConcurrency": 16,
+      "idempotency": {
+        "type": "IDEMPOTENT",
+        "maxAttempts": 2
+      },
+      "reversibility": {
+        "type": "NOT_APPLICABLE",
+        "description": "The tool is read-only."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "firewall-cmd"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "firewall_rules",
+        "digest": "02d0facabae7af82f00ca960290676ada6156675409fdc57940c77625f169df0"
+      }
+    },
+    {
+      "id": "kylin.firewall.state",
+      "version": "1.0.0",
+      "title": "Read firewall state",
+      "description": "Read firewalld runtime state",
+      "executor": "NODE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "output"
+        ]
+      },
+      "riskFloor": "R0",
+      "readOnly": true,
+      "alwaysRequireApproval": false,
+      "directDisplay": true,
+      "resourceLocks": [],
+      "timeoutSeconds": 15,
+      "maxConcurrency": 16,
+      "idempotency": {
+        "type": "IDEMPOTENT",
+        "maxAttempts": 2
+      },
+      "reversibility": {
+        "type": "NOT_APPLICABLE",
+        "description": "The tool is read-only."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "firewall-cmd"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "firewall_state",
+        "digest": "51375b0cda2ebf2d1121a28dfdf4e7c4efad0cea83100466cbcec9e0d2ae85e6"
+      }
+    },
+    {
+      "id": "kylin.firewall.unblock_ip",
+      "version": "1.0.0",
+      "title": "Unblock IP",
+      "description": "Unblock an IP via firewalld",
+      "executor": "NODE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "ip": {
+            "type": "string",
+            "minLength": 1
+          },
+          "scope": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "ip",
+          "scope"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "output"
+        ]
+      },
+      "riskFloor": "R3",
+      "readOnly": false,
+      "alwaysRequireApproval": true,
+      "directDisplay": false,
+      "resourceLocks": [
+        {
+          "template": "firewall:{ip}",
+          "mode": "WRITE_EXCLUSIVE"
+        }
+      ],
+      "timeoutSeconds": 30,
+      "maxConcurrency": 4,
+      "idempotency": {
+        "type": "AT_MOST_ONCE",
+        "maxAttempts": 1
+      },
+      "reversibility": {
+        "type": "COMPENSATING",
+        "description": "Re-apply a block with kylin.firewall.block_ip if needed."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "firewall-cmd"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "unblock_ip",
+        "digest": "2233d6c8d3b9496c0e15308234708a906e5ed27762ce2fc7ccb880487c5bba46"
+      }
+    },
+    {
+      "id": "kylin.io.snapshot",
+      "version": "1.0.0",
+      "title": "Read disk I/O counters",
+      "description": "Read disk I/O counters from /proc/diskstats",
+      "executor": "NODE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "output"
+        ]
+      },
+      "riskFloor": "R0",
+      "readOnly": true,
+      "alwaysRequireApproval": false,
+      "directDisplay": true,
+      "resourceLocks": [],
+      "timeoutSeconds": 15,
+      "maxConcurrency": 16,
+      "idempotency": {
+        "type": "IDEMPOTENT",
+        "maxAttempts": 2
+      },
+      "reversibility": {
+        "type": "NOT_APPLICABLE",
+        "description": "The tool is read-only."
+      },
+      "nodeRequirements": {
+        "commands": []
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "io_snapshot",
+        "digest": "a251c5be93725435f8152aff63b70d0209e2522c5983e77200c0578edf4aa95f"
+      }
+    },
+    {
+      "id": "kylin.log.journal_query",
+      "version": "1.0.0",
+      "title": "Query journald",
+      "description": "Query journald logs for an allowlisted service",
+      "executor": "NODE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "unit": {
+            "type": "string",
+            "minLength": 1
+          },
+          "lines": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "debug",
+              "info",
+              "notice",
+              "warning",
+              "err",
+              "crit",
+              "alert",
+              "emerg"
+            ]
+          }
+        },
+        "required": [
+          "unit"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "output"
+        ]
+      },
+      "riskFloor": "R0",
+      "readOnly": true,
+      "alwaysRequireApproval": false,
+      "directDisplay": true,
+      "resourceLocks": [],
+      "timeoutSeconds": 30,
+      "maxConcurrency": 8,
+      "idempotency": {
+        "type": "IDEMPOTENT",
+        "maxAttempts": 2
+      },
+      "reversibility": {
+        "type": "NOT_APPLICABLE",
+        "description": "The tool is read-only."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "journalctl"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "journalctl_query",
+        "digest": "0c718d582cbf1825d96eab8f6aedc09d1a59fe598d205be9a617d62fa9ae99ca"
+      }
+    },
+    {
+      "id": "kylin.metrics.node_exporter_snapshot",
+      "version": "1.0.0",
+      "title": "Collect node_exporter snapshot",
+      "description": "Collect the configured node_exporter metrics snapshot",
+      "executor": "NODE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "output"
+        ]
+      },
+      "riskFloor": "R0",
+      "readOnly": true,
+      "alwaysRequireApproval": false,
+      "directDisplay": true,
+      "resourceLocks": [],
+      "timeoutSeconds": 20,
+      "maxConcurrency": 16,
+      "idempotency": {
+        "type": "IDEMPOTENT",
+        "maxAttempts": 2
+      },
+      "reversibility": {
+        "type": "NOT_APPLICABLE",
+        "description": "The tool is read-only."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "curl"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "node_exporter_snapshot",
+        "digest": "d0c770ae97ff9712d3ab9973131ff6235de802665f1d058ce8fa2ab68d016be3"
+      }
+    },
+    {
+      "id": "kylin.net.connections",
+      "version": "1.0.0",
+      "title": "List connections",
+      "description": "List active TCP/UDP connections",
+      "executor": "NODE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "output"
+        ]
+      },
+      "riskFloor": "R0",
+      "readOnly": true,
+      "alwaysRequireApproval": false,
+      "directDisplay": true,
+      "resourceLocks": [],
+      "timeoutSeconds": 15,
+      "maxConcurrency": 16,
+      "idempotency": {
+        "type": "IDEMPOTENT",
+        "maxAttempts": 2
+      },
+      "reversibility": {
+        "type": "NOT_APPLICABLE",
+        "description": "The tool is read-only."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "ss"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "list_connections",
+        "digest": "055ba16a10cda461da08aa84b4d7769bfac9f6ce364a34ea78100fb889bb0f8a"
+      }
+    },
+    {
+      "id": "kylin.net.listening_ports",
+      "version": "1.0.0",
+      "title": "List listening ports",
+      "description": "List listening TCP/UDP ports",
+      "executor": "NODE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "output"
+        ]
+      },
+      "riskFloor": "R0",
+      "readOnly": true,
+      "alwaysRequireApproval": false,
+      "directDisplay": true,
+      "resourceLocks": [],
+      "timeoutSeconds": 15,
+      "maxConcurrency": 16,
+      "idempotency": {
+        "type": "IDEMPOTENT",
+        "maxAttempts": 2
+      },
+      "reversibility": {
+        "type": "NOT_APPLICABLE",
+        "description": "The tool is read-only."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "ss"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "list_listening_ports",
+        "digest": "05d59997a70423b39f4ea70ecb0c956c0c1dcfbc0399ea94bdf9e458e320a90e"
+      }
+    },
+    {
+      "id": "kylin.package.info",
+      "version": "1.0.0",
+      "title": "Read package metadata",
+      "description": "Read RPM package metadata",
+      "executor": "NODE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "package": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "package"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "output"
+        ]
+      },
+      "riskFloor": "R0",
+      "readOnly": true,
+      "alwaysRequireApproval": false,
+      "directDisplay": true,
+      "resourceLocks": [],
+      "timeoutSeconds": 15,
+      "maxConcurrency": 16,
+      "idempotency": {
+        "type": "IDEMPOTENT",
+        "maxAttempts": 2
+      },
+      "reversibility": {
+        "type": "NOT_APPLICABLE",
+        "description": "The tool is read-only."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "rpm"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "package_info",
+        "digest": "5fc213c77f476effb009d3a1ee6a51306aac7bd991149868cd9b98abe7ed2098"
+      }
+    },
+    {
+      "id": "kylin.package.list",
+      "version": "1.0.0",
+      "title": "List installed packages",
+      "description": "List installed RPM packages",
+      "executor": "NODE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "output"
+        ]
+      },
+      "riskFloor": "R0",
+      "readOnly": true,
+      "alwaysRequireApproval": false,
+      "directDisplay": true,
+      "resourceLocks": [],
+      "timeoutSeconds": 30,
+      "maxConcurrency": 16,
+      "idempotency": {
+        "type": "IDEMPOTENT",
+        "maxAttempts": 2
+      },
+      "reversibility": {
+        "type": "NOT_APPLICABLE",
+        "description": "The tool is read-only."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "rpm"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "list_installed_packages",
+        "digest": "eb03d087b2512283c35b05a88b09148ccae4cc855fc60d791fd00ee6130ab5ad"
+      }
+    },
+    {
+      "id": "kylin.process.list",
+      "version": "1.0.0",
+      "title": "List processes",
+      "description": "List processes",
+      "executor": "NODE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "output"
+        ]
+      },
+      "riskFloor": "R0",
+      "readOnly": true,
+      "alwaysRequireApproval": false,
+      "directDisplay": true,
+      "resourceLocks": [],
+      "timeoutSeconds": 15,
+      "maxConcurrency": 16,
+      "idempotency": {
+        "type": "IDEMPOTENT",
+        "maxAttempts": 2
+      },
+      "reversibility": {
+        "type": "NOT_APPLICABLE",
+        "description": "The tool is read-only."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "ps"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "process_list",
+        "digest": "18538d8465efdc13b32bdf5eb25cc9b94ff782dc2c2befd619a7e75b588ad2c0"
+      }
+    },
+    {
+      "id": "kylin.process.top_cpu",
+      "version": "1.0.0",
+      "title": "Top CPU processes",
+      "description": "List top CPU consuming processes",
+      "executor": "NODE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "output"
+        ]
+      },
+      "riskFloor": "R0",
+      "readOnly": true,
+      "alwaysRequireApproval": false,
+      "directDisplay": true,
+      "resourceLocks": [],
+      "timeoutSeconds": 15,
+      "maxConcurrency": 16,
+      "idempotency": {
+        "type": "IDEMPOTENT",
+        "maxAttempts": 2
+      },
+      "reversibility": {
+        "type": "NOT_APPLICABLE",
+        "description": "The tool is read-only."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "ps"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "top_cpu_processes",
+        "digest": "dfebcbf9c2c2a8f33c7b4e5e678a26b4ab5f9de6aa97267a96f0a283f91941db"
+      }
+    },
+    {
+      "id": "kylin.process.top_memory",
+      "version": "1.0.0",
+      "title": "Top memory processes",
+      "description": "List top memory consuming processes",
+      "executor": "NODE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "output"
+        ]
+      },
+      "riskFloor": "R0",
+      "readOnly": true,
+      "alwaysRequireApproval": false,
+      "directDisplay": true,
+      "resourceLocks": [],
+      "timeoutSeconds": 15,
+      "maxConcurrency": 16,
+      "idempotency": {
+        "type": "IDEMPOTENT",
+        "maxAttempts": 2
+      },
+      "reversibility": {
+        "type": "NOT_APPLICABLE",
+        "description": "The tool is read-only."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "ps"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "top_memory_processes",
+        "digest": "39ab36a68fb00c2d75e6cffca2684a4d69dbd02f97a3b2c0a6260a2b2f7a248a"
+      }
+    },
+    {
+      "id": "kylin.security.auditd_status",
+      "version": "1.0.0",
+      "title": "Read auditd status",
+      "description": "Read auditd service status",
+      "executor": "NODE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "output"
+        ]
+      },
+      "riskFloor": "R0",
+      "readOnly": true,
+      "alwaysRequireApproval": false,
+      "directDisplay": true,
+      "resourceLocks": [],
+      "timeoutSeconds": 15,
+      "maxConcurrency": 16,
+      "idempotency": {
+        "type": "IDEMPOTENT",
+        "maxAttempts": 2
+      },
+      "reversibility": {
+        "type": "NOT_APPLICABLE",
+        "description": "The tool is read-only."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "systemctl"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "auditd_status",
+        "digest": "d642e1f4ead4ff61f34014b49641834d5a024f0eb7f312abe60a7793a232cf15"
+      }
+    },
+    {
+      "id": "kylin.security.kysec_status",
+      "version": "1.0.0",
+      "title": "Read KYSEC status",
+      "description": "Read KYSEC security status when available",
+      "executor": "NODE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "output"
+        ]
+      },
+      "riskFloor": "R0",
+      "readOnly": true,
+      "alwaysRequireApproval": false,
+      "directDisplay": true,
+      "resourceLocks": [],
+      "timeoutSeconds": 15,
+      "maxConcurrency": 16,
+      "idempotency": {
+        "type": "IDEMPOTENT",
+        "maxAttempts": 2
+      },
+      "reversibility": {
+        "type": "NOT_APPLICABLE",
+        "description": "The tool is read-only."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "kysec"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "kysec_status",
+        "digest": "3c1c98e2c6324f1c395dc4d202ca47443e6d765de98a131b938e284eec4524bd"
+      }
+    },
+    {
+      "id": "kylin.security.security_switch_status",
+      "version": "1.0.0",
+      "title": "Read security-switch status",
+      "description": "Read Kylin security-switch status when available",
+      "executor": "NODE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "output"
+        ]
+      },
+      "riskFloor": "R0",
+      "readOnly": true,
+      "alwaysRequireApproval": false,
+      "directDisplay": true,
+      "resourceLocks": [],
+      "timeoutSeconds": 15,
+      "maxConcurrency": 16,
+      "idempotency": {
+        "type": "IDEMPOTENT",
+        "maxAttempts": 2
+      },
+      "reversibility": {
+        "type": "NOT_APPLICABLE",
+        "description": "The tool is read-only."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "security-switch"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "security_switch_status",
+        "digest": "b8632a4fb6ed3b9c10079bcb003e4d31c0a45261d7285080dd1f1f9303386277"
+      }
+    },
+    {
+      "id": "kylin.security.selinux_status",
+      "version": "1.0.0",
+      "title": "Read SELinux status",
+      "description": "Read SELinux enforce/permissive/disabled status",
+      "executor": "NODE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "output"
+        ]
+      },
+      "riskFloor": "R0",
+      "readOnly": true,
+      "alwaysRequireApproval": false,
+      "directDisplay": true,
+      "resourceLocks": [],
+      "timeoutSeconds": 15,
+      "maxConcurrency": 16,
+      "idempotency": {
+        "type": "IDEMPOTENT",
+        "maxAttempts": 2
+      },
+      "reversibility": {
+        "type": "NOT_APPLICABLE",
+        "description": "The tool is read-only."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "getenforce"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "selinux_status",
+        "digest": "0a041aa13ddb58ef6ef198945c106f681558b4c386264bfda280570b06233274"
+      }
+    },
+    {
+      "id": "kylin.service.disable",
+      "version": "1.0.0",
+      "title": "Disable service",
+      "description": "Disable an allowlisted service at boot",
+      "executor": "NODE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "service": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "service"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "output"
+        ]
+      },
+      "riskFloor": "R3",
+      "readOnly": false,
+      "alwaysRequireApproval": true,
+      "directDisplay": false,
+      "resourceLocks": [
+        {
+          "template": "service:{service}",
+          "mode": "WRITE_EXCLUSIVE"
+        }
+      ],
+      "timeoutSeconds": 30,
+      "maxConcurrency": 4,
+      "idempotency": {
+        "type": "AT_MOST_ONCE",
+        "maxAttempts": 1
+      },
+      "reversibility": {
+        "type": "REVERSIBLE",
+        "description": "Re-enable the unit with kylin.service.enable."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "systemctl"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "disable_service",
+        "digest": "9a1045e66033e204d5391319b615215ff2aed54967333950328dca9acb8e7380"
+      }
+    },
+    {
+      "id": "kylin.service.enable",
+      "version": "1.0.0",
+      "title": "Enable service",
+      "description": "Enable an allowlisted service at boot",
+      "executor": "NODE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "service": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "service"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "output"
+        ]
+      },
+      "riskFloor": "R3",
+      "readOnly": false,
+      "alwaysRequireApproval": true,
+      "directDisplay": false,
+      "resourceLocks": [
+        {
+          "template": "service:{service}",
+          "mode": "WRITE_EXCLUSIVE"
+        }
+      ],
+      "timeoutSeconds": 30,
+      "maxConcurrency": 4,
+      "idempotency": {
+        "type": "AT_MOST_ONCE",
+        "maxAttempts": 1
+      },
+      "reversibility": {
+        "type": "REVERSIBLE",
+        "description": "Disable the unit with kylin.service.disable."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "systemctl"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "enable_service",
+        "digest": "732cc72104fee89b5a6b8e43f3ecbabc3fc704867c82a8e15bae96177c7987ed"
+      }
+    },
+    {
+      "id": "kylin.service.reload",
+      "version": "1.0.0",
+      "title": "Reload service",
+      "description": "Reload an allowlisted service",
+      "executor": "NODE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "service": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "service"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "output"
+        ]
+      },
+      "riskFloor": "R3",
+      "readOnly": false,
+      "alwaysRequireApproval": true,
+      "directDisplay": false,
+      "resourceLocks": [
+        {
+          "template": "service:{service}",
+          "mode": "WRITE_EXCLUSIVE"
+        }
+      ],
+      "timeoutSeconds": 30,
+      "maxConcurrency": 4,
+      "idempotency": {
+        "type": "AT_MOST_ONCE",
+        "maxAttempts": 1
+      },
+      "reversibility": {
+        "type": "COMPENSATING",
+        "description": "Reload applies the current unit configuration; there is no inverse command."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "systemctl"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "reload_service",
+        "digest": "17f79b6c93528c9152ab80dd740d279e263d4f2d1f59bcf77119c570cf744465"
+      }
+    },
+    {
+      "id": "kylin.service.restart",
+      "version": "1.0.0",
+      "title": "Restart service",
+      "description": "Restart an allowlisted service",
+      "executor": "NODE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "service": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "service"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "output"
+        ]
+      },
+      "riskFloor": "R3",
+      "readOnly": false,
+      "alwaysRequireApproval": true,
+      "directDisplay": false,
+      "resourceLocks": [
+        {
+          "template": "service:{service}",
+          "mode": "WRITE_EXCLUSIVE"
+        }
+      ],
+      "timeoutSeconds": 30,
+      "maxConcurrency": 4,
+      "idempotency": {
+        "type": "AT_MOST_ONCE",
+        "maxAttempts": 1
+      },
+      "reversibility": {
+        "type": "COMPENSATING",
+        "description": "Restart is a stop then start; there is no single inverse besides another restart."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "systemctl"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "restart_service",
+        "digest": "ca4e2f62f60ffcee78610171a025b6cd61e8144c7b162810e51b4c42d3808857"
+      }
+    },
+    {
+      "id": "kylin.service.start",
+      "version": "1.0.0",
+      "title": "Start service",
+      "description": "Start an allowlisted service",
+      "executor": "NODE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "service": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "service"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "output"
+        ]
+      },
+      "riskFloor": "R3",
+      "readOnly": false,
+      "alwaysRequireApproval": true,
+      "directDisplay": false,
+      "resourceLocks": [
+        {
+          "template": "service:{service}",
+          "mode": "WRITE_EXCLUSIVE"
+        }
+      ],
+      "timeoutSeconds": 30,
+      "maxConcurrency": 4,
+      "idempotency": {
+        "type": "AT_MOST_ONCE",
+        "maxAttempts": 1
+      },
+      "reversibility": {
+        "type": "REVERSIBLE",
+        "description": "Stop the unit with kylin.service.stop."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "systemctl"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "start_service",
+        "digest": "9d8b9892cd26cdd26db9b68688aec3cf24138779f74ed1e8d5b01eb7f8007fb3"
+      }
+    },
+    {
+      "id": "kylin.service.status",
+      "version": "1.0.0",
+      "title": "Read service status",
+      "description": "Read the active, sub, load and unit-file state of one allowlisted systemd service.",
+      "executor": "NODE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "service": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "service"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "service": {
+            "type": "string"
+          },
+          "activeState": {
+            "type": "string"
+          },
+          "subState": {
+            "type": "string"
+          },
+          "loadState": {
+            "type": "string"
+          },
+          "unitFileState": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "service",
+          "activeState",
+          "subState",
+          "loadState",
+          "unitFileState"
+        ]
+      },
+      "riskFloor": "R0",
+      "readOnly": true,
+      "alwaysRequireApproval": false,
+      "directDisplay": true,
+      "resourceLocks": [
+        {
+          "template": "node:{nodeId}:service:{arguments.service}",
+          "mode": "READ_SHARED"
+        }
+      ],
+      "timeoutSeconds": 15,
+      "maxConcurrency": 16,
+      "idempotency": {
+        "type": "IDEMPOTENT",
+        "maxAttempts": 2
+      },
+      "reversibility": {
+        "type": "NOT_APPLICABLE",
+        "description": "The tool is read-only."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "systemctl"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "service_status",
+        "digest": "f3898a5871a647c9f41962d89e2c2a3949eb96fb188af863c2a8560fa729e50a"
+      }
+    },
+    {
+      "id": "kylin.service.stop",
+      "version": "1.0.0",
+      "title": "Stop service",
+      "description": "Stop an allowlisted service",
+      "executor": "NODE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "service": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "service"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "output"
+        ]
+      },
+      "riskFloor": "R3",
+      "readOnly": false,
+      "alwaysRequireApproval": true,
+      "directDisplay": false,
+      "resourceLocks": [
+        {
+          "template": "service:{service}",
+          "mode": "WRITE_EXCLUSIVE"
+        }
+      ],
+      "timeoutSeconds": 30,
+      "maxConcurrency": 4,
+      "idempotency": {
+        "type": "AT_MOST_ONCE",
+        "maxAttempts": 1
+      },
+      "reversibility": {
+        "type": "REVERSIBLE",
+        "description": "Start the unit with kylin.service.start."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "systemctl"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "stop_service",
+        "digest": "63251fc0fb14e3a3afbedf5bd10307826d4fd12cffe611d31b20568ecd718bf8"
+      }
+    },
+    {
+      "id": "kylin.system.mounts",
+      "version": "1.0.0",
+      "title": "List mounts",
+      "description": "List mounted filesystems",
+      "executor": "NODE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "output"
+        ]
+      },
+      "riskFloor": "R0",
+      "readOnly": true,
+      "alwaysRequireApproval": false,
+      "directDisplay": true,
+      "resourceLocks": [],
+      "timeoutSeconds": 15,
+      "maxConcurrency": 16,
+      "idempotency": {
+        "type": "IDEMPOTENT",
+        "maxAttempts": 2
+      },
+      "reversibility": {
+        "type": "NOT_APPLICABLE",
+        "description": "The tool is read-only."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "findmnt"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "filesystem_mounts",
+        "digest": "62e1781dc5cfc2e5c69844d83b413a99d1377b6891c2f53f3dc71db9963d284f"
+      }
+    },
+    {
+      "id": "kylin.system.sysctl_snapshot",
+      "version": "1.0.0",
+      "title": "Read sysctl snapshot",
+      "description": "Read kernel sysctl parameters",
+      "executor": "NODE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "output"
+        ]
+      },
+      "riskFloor": "R0",
+      "readOnly": true,
+      "alwaysRequireApproval": false,
+      "directDisplay": true,
+      "resourceLocks": [],
+      "timeoutSeconds": 15,
+      "maxConcurrency": 16,
+      "idempotency": {
+        "type": "IDEMPOTENT",
+        "maxAttempts": 2
+      },
+      "reversibility": {
+        "type": "NOT_APPLICABLE",
+        "description": "The tool is read-only."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "sysctl"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "sysctl_snapshot",
+        "digest": "f919550e2a5b1e2b79b1cd055d7afa285cd81bbb109c74b65b4c75b13303669d"
+      }
+    },
+    {
+      "id": "kylin.user.accounts",
+      "version": "1.0.0",
+      "title": "List user accounts",
+      "description": "List local user accounts",
+      "executor": "NODE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "output"
+        ]
+      },
+      "riskFloor": "R0",
+      "readOnly": true,
+      "alwaysRequireApproval": false,
+      "directDisplay": true,
+      "resourceLocks": [],
+      "timeoutSeconds": 15,
+      "maxConcurrency": 16,
+      "idempotency": {
+        "type": "IDEMPOTENT",
+        "maxAttempts": 2
+      },
+      "reversibility": {
+        "type": "NOT_APPLICABLE",
+        "description": "The tool is read-only."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "getent"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "list_user_accounts",
+        "digest": "36c76f5eb0a5fdc3a2c6516aa12e50ff2676da1dd15cdac1479efac36726966f"
+      }
+    },
+    {
+      "id": "kylin.user.last_logins",
+      "version": "1.0.0",
+      "title": "List recent logins",
+      "description": "List recent login records",
+      "executor": "NODE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "output"
+        ]
+      },
+      "riskFloor": "R0",
+      "readOnly": true,
+      "alwaysRequireApproval": false,
+      "directDisplay": true,
+      "resourceLocks": [],
+      "timeoutSeconds": 15,
+      "maxConcurrency": 16,
+      "idempotency": {
+        "type": "IDEMPOTENT",
+        "maxAttempts": 2
+      },
+      "reversibility": {
+        "type": "NOT_APPLICABLE",
+        "description": "The tool is read-only."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "last"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "last_logins",
+        "digest": "e292e0b31de94636eb5e0f59da4a7a3e9edbcb429064ec8bb2371989e164b42d"
+      }
+    },
+    {
+      "id": "kylin.user.privileged_groups",
+      "version": "1.0.0",
+      "title": "List privileged groups",
+      "description": "List common privileged group members",
+      "executor": "NODE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "output"
+        ]
+      },
+      "riskFloor": "R0",
+      "readOnly": true,
+      "alwaysRequireApproval": false,
+      "directDisplay": true,
+      "resourceLocks": [],
+      "timeoutSeconds": 15,
+      "maxConcurrency": 16,
+      "idempotency": {
+        "type": "IDEMPOTENT",
+        "maxAttempts": 2
+      },
+      "reversibility": {
+        "type": "NOT_APPLICABLE",
+        "description": "The tool is read-only."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "getent"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "list_privileged_groups",
+        "digest": "b493cf4a3025e9cbc99fc2387b7967490ac0cb3ac9d85441b9a1603f3947164e"
+      }
+    },
+    {
+      "id": "kylin.workspace.bash",
+      "version": "1.0.0",
+      "title": "Workspace bash",
+      "description": "Execute a bash script inside the sandboxed workspace. The container has no network, no host access, and a read-only root filesystem.",
+      "executor": "WORKSPACE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "script": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100000
+          }
+        },
+        "required": [
+          "script"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string"
+          },
+          "exitCode": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "output",
+          "exitCode"
+        ]
+      },
+      "riskFloor": "R1",
+      "readOnly": false,
+      "alwaysRequireApproval": false,
+      "directDisplay": false,
+      "resourceLocks": [],
+      "timeoutSeconds": 300,
+      "maxConcurrency": 4,
+      "idempotency": {
+        "type": "NON_RETRYABLE",
+        "maxAttempts": 1
+      },
+      "reversibility": {
+        "type": "IRREVERSIBLE",
+        "description": "Script execution in the sandbox cannot be undone."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "podman"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "workspace_bash",
+        "digest": "c652150309a0d6d18ce1c543c64168b3adb38a98f8389df6ef2549940ec8d5fe"
+      }
+    },
+    {
+      "id": "kylin.workspace.edit",
+      "version": "1.0.0",
+      "title": "Workspace edit",
+      "description": "Edit a file in the sandboxed workspace by replacing oldText with newText. Path must be relative and within the workspace.",
+      "executor": "WORKSPACE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          },
+          "oldText": {
+            "type": "string"
+          },
+          "newText": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "oldText",
+          "newText"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "replaced": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "path",
+          "replaced"
+        ]
+      },
+      "riskFloor": "R1",
+      "readOnly": false,
+      "alwaysRequireApproval": false,
+      "directDisplay": false,
+      "resourceLocks": [],
+      "timeoutSeconds": 30,
+      "maxConcurrency": 8,
+      "idempotency": {
+        "type": "NON_RETRYABLE",
+        "maxAttempts": 1
+      },
+      "reversibility": {
+        "type": "IRREVERSIBLE",
+        "description": "File edits in the sandbox are not automatically reversed."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "podman"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "workspace_edit",
+        "digest": "0ca41c6011dfbd79b9578ede376de7b4bda23ffc2a0f55c316d76dd2ffd65607"
+      }
+    },
+    {
+      "id": "kylin.workspace.glob",
+      "version": "1.0.0",
+      "title": "Workspace glob",
+      "description": "Glob for files in the sandboxed workspace filesystem. Pattern is relative to the workspace root.",
+      "executor": "WORKSPACE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pattern": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          }
+        },
+        "required": [
+          "pattern"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "files"
+        ]
+      },
+      "riskFloor": "R0",
+      "readOnly": true,
+      "alwaysRequireApproval": false,
+      "directDisplay": true,
+      "resourceLocks": [],
+      "timeoutSeconds": 30,
+      "maxConcurrency": 8,
+      "idempotency": {
+        "type": "IDEMPOTENT",
+        "maxAttempts": 2
+      },
+      "reversibility": {
+        "type": "NOT_APPLICABLE",
+        "description": "The tool is read-only."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "podman"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "workspace_glob",
+        "digest": "cbdc2010868b26b71e7e1321fc35604c8b8655175d78280a11c47b95e30775d6"
+      }
+    },
+    {
+      "id": "kylin.workspace.python",
+      "version": "1.0.0",
+      "title": "Workspace python",
+      "description": "Execute a python3 script inside the sandboxed workspace. The container has no network, no host access, and a read-only root filesystem.",
+      "executor": "WORKSPACE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "script": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100000
+          }
+        },
+        "required": [
+          "script"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string"
+          },
+          "exitCode": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "output",
+          "exitCode"
+        ]
+      },
+      "riskFloor": "R1",
+      "readOnly": false,
+      "alwaysRequireApproval": false,
+      "directDisplay": false,
+      "resourceLocks": [],
+      "timeoutSeconds": 300,
+      "maxConcurrency": 4,
+      "idempotency": {
+        "type": "NON_RETRYABLE",
+        "maxAttempts": 1
+      },
+      "reversibility": {
+        "type": "IRREVERSIBLE",
+        "description": "Script execution in the sandbox cannot be undone."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "podman"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "workspace_python",
+        "digest": "29951faefa98d2e5e8d47d98b39cc940044e1faf432011037515e28230bdf363"
+      }
+    },
+    {
+      "id": "kylin.workspace.read",
+      "version": "1.0.0",
+      "title": "Workspace read",
+      "description": "Read a file from the sandboxed workspace filesystem. Path must be relative and within the workspace.",
+      "executor": "WORKSPACE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          }
+        },
+        "required": [
+          "path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "content": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "content"
+        ]
+      },
+      "riskFloor": "R0",
+      "readOnly": true,
+      "alwaysRequireApproval": false,
+      "directDisplay": true,
+      "resourceLocks": [],
+      "timeoutSeconds": 30,
+      "maxConcurrency": 8,
+      "idempotency": {
+        "type": "IDEMPOTENT",
+        "maxAttempts": 2
+      },
+      "reversibility": {
+        "type": "NOT_APPLICABLE",
+        "description": "The tool is read-only."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "podman"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "workspace_read",
+        "digest": "7a95c1bfee1e276066b2aa25b04cb934daeb49a4e45329136a784a61f5b0a707"
+      }
+    },
+    {
+      "id": "kylin.workspace.write",
+      "version": "1.0.0",
+      "title": "Workspace write",
+      "description": "Write a file in the sandboxed workspace filesystem. Path must be relative and within the workspace.",
+      "executor": "WORKSPACE",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          },
+          "content": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "content"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "path",
+          "sizeBytes"
+        ]
+      },
+      "riskFloor": "R1",
+      "readOnly": false,
+      "alwaysRequireApproval": false,
+      "directDisplay": false,
+      "resourceLocks": [],
+      "timeoutSeconds": 30,
+      "maxConcurrency": 8,
+      "idempotency": {
+        "type": "IDEMPOTENT",
+        "maxAttempts": 2
+      },
+      "reversibility": {
+        "type": "IRREVERSIBLE",
+        "description": "Overwriting a workspace file does not keep the previous contents."
+      },
+      "nodeRequirements": {
+        "commands": [
+          "podman"
+        ]
+      },
+      "implementation": {
+        "kind": "NATIVE",
+        "entrypoint": "workspace_write",
+        "digest": "6a9ccb1a1e5b494e7c38ea3cbdda9ce4f5591a2d78422b64c07e87fb3014d34a"
+      }
+    }
+  ]
+}

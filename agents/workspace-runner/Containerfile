@@ -1,0 +1,56 @@
+# Workspace 沙箱基础镜像。
+#
+# 构建（在本目录下执行，构建上下文必须是 agents/workspace-runner/，scripts/yq 要能被 COPY 到）：
+#     podman build -t kylin-workspace:latest -f Containerfile .
+# 镜像名可用 KYLIN_WORKSPACE_IMAGE 覆盖，默认 kylin-workspace:latest。
+#
+# 容器由 workspace-runner 以 rootless Podman 启动，运行时约束见 internal/sandbox/podman.go：
+# --read-only / --network=none / --cap-drop=ALL / seccomp / 唯一可写区是 tmpfs /workspace。
+# 因此镜像里装什么，就是沙箱内 Agent 能用的全部工具——**运行期一件东西也装不进来**。
+FROM registry.access.redhat.com/ubi9/ubi-minimal:9.6
+
+# 沙箱工具集。除 shadow-utils（只为下面 useradd 用）外都是给 Agent 用的：
+#   bash/coreutils   —— exec 动作的基本执行环境
+#   python3 + PyYAML —— 脚本与 YAML 处理，PyYAML 同时是 /usr/local/bin/yq 的依赖
+#   git              —— 工作区版本对比
+#   grep/sed/gawk    —— 文本检索与处理。**没有 ripgrep**：UBI9 的 baseos/appstream
+#                       都不提供 rg（它在 EPEL），旧版 Containerfile 把 ripgrep 写进
+#                       microdnf 列表本身就是构建失败的原因之一。
+#   jq               —— JSON 处理，同时是 /usr/local/bin/yq 的依赖
+#   sqlite           —— 提供 sqlite3 CLI（appstream 里的包名叫 sqlite，不叫 sqlite3）
+#   findutils        —— glob 动作走 find，缺了 glob/list_dir 直接失效
+#   procps-ng / diffutils / tar / gzip —— 常规排查与打包
+RUN microdnf install -y --nodocs \
+        bash \
+        coreutils-single \
+        python3 \
+        python3-pyyaml \
+        git \
+        grep \
+        sed \
+        gawk \
+        jq \
+        sqlite \
+        findutils \
+        procps-ng \
+        diffutils \
+        tar \
+        gzip \
+        shadow-utils \
+    && microdnf clean all \
+    && rm -rf /var/cache/dnf /var/cache/yum
+
+# yq 不在 UBI9 源里，而沙箱 --network=none，构建期之后无法再获取任何东西。
+# 这里 COPY 的是一份可审阅的 Python 脚本（YAML→JSON→jq），不是预编译二进制；
+# 语义与限制见 scripts/yq 头部注释。
+COPY scripts/yq /usr/local/bin/yq
+RUN chmod 0755 /usr/local/bin/yq
+
+RUN useradd --create-home --shell /bin/bash --uid 10001 workspace
+
+# /workspace 由 --tmpfs 覆盖挂载，这里建目录只为镜像自身自洽（根文件系统只读）。
+WORKDIR /workspace
+USER workspace
+
+# 容器由 podman create 显式传入 sleep infinity 常驻，CMD 只是没有参数时的兜底。
+CMD ["sleep", "infinity"]

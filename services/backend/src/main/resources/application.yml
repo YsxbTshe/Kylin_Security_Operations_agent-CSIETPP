@@ -1,0 +1,185 @@
+spring:
+  application:
+    name: backend
+  profiles:
+    default: dev
+  sql:
+    init:
+      mode: never
+  task:
+    scheduling:
+      # 全仓 5 个 @Scheduled（run 轮询、保留期清扫、产物 GC、等待超时清扫、事件遏制对账）
+      # 默认共用一根调度线程，任何一个跑久了都会拖住其余四个。run 轮询本身已改为只做
+      # 租约+派发（执行在 AgentRunWorker 自己的线程池里），这里再留出余量给清扫类任务。
+      pool:
+        size: ${SPRING_TASK_SCHEDULING_POOL_SIZE:3}
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+
+app:
+  security:
+    keys:
+      approval-signing:
+        key-id: ${APPROVAL_SIGNING_KEY_ID:}
+        private-key-ref: ${APPROVAL_SIGNING_PRIVATE_KEY_REF:}
+        public-key-ref: ${APPROVAL_SIGNING_PUBLIC_KEY_REF:}
+      catalog-signing:
+        key-id: ${CATALOG_SIGNING_KEY_ID:}
+        private-key-ref: ${CATALOG_SIGNING_PRIVATE_KEY_REF:}
+        public-key-ref: ${CATALOG_SIGNING_PUBLIC_KEY_REF:}
+      node-ca:
+        key-id: ${NODE_CA_KEY_ID:}
+        private-key-ref: ${NODE_CA_PRIVATE_KEY_REF:}
+        public-key-ref: ${NODE_CA_PUBLIC_KEY_REF:}
+      package-signing:
+        key-id: ${PACKAGE_SIGNING_KEY_ID:}
+        private-key-ref: ${PACKAGE_SIGNING_PRIVATE_KEY_REF:}
+        public-key-ref: ${PACKAGE_SIGNING_PUBLIC_KEY_REF:}
+  profile:
+    mode: mvp
+  # 严格模式总开关：开启后所有“需真实外部依赖”的能力硬失败而非降级
+  # （未配置 LLM 不可发起任务；embedding 非 OPENAI_COMPATIBLE 时向量检索直接拒绝）。
+  # 关闭（默认）时优雅降级并在 UI 如实标注，便于离线演示。
+  strict-mode:
+    enabled: ${STRICT_MODE_ENABLED:false}
+  auth:
+    session-hours: 12
+    cookie-name: kylin_session
+    enforce-password-change: ${AUTH_ENFORCE_PASSWORD_CHANGE:true}
+  audit:
+    elasticsearch:
+      enabled: ${AUDIT_ELASTICSEARCH_ENABLED:false}
+      base-url: ${AUDIT_ELASTICSEARCH_BASE_URL:http://localhost:9200}
+      index: ${AUDIT_ELASTICSEARCH_INDEX:aiops-agent-events}
+      event-search-index: ${AUDIT_ELASTICSEARCH_EVENT_SEARCH_INDEX:aiops-agent-events*}
+      node-log-index: ${AUDIT_ELASTICSEARCH_NODE_LOG_INDEX:kylin-node-logs-*}
+      timeout-ms: ${AUDIT_ELASTICSEARCH_TIMEOUT_MS:2000}
+  assets:
+    avatar-dir: ./data/avatars
+    avatar-url-prefix: /uploads/avatars
+    # PDF 抽出的插图；按内容哈希命名，重复图只落一份
+    rag-asset-dir: ./data/rag-assets
+    rag-asset-url-prefix: /uploads/rag-assets
+  artifact:
+    storage-dir: ${KYLIN_ARTIFACT_STORAGE_DIR:./data/artifacts}
+    retention-days: ${KYLIN_ARTIFACT_RETENTION_DAYS:30}
+    temp-max-age-minutes: ${KYLIN_ARTIFACT_TEMP_MAX_AGE_MINUTES:60}
+    download:
+      signing-key: ${KYLIN_ARTIFACT_DOWNLOAD_SIGNING_KEY:}
+      ttl-seconds: ${KYLIN_ARTIFACT_DOWNLOAD_TTL_SECONDS:900}
+  skill:
+    # Skill catalog 签名密钥（HMAC-SM3）；未配置时签名/验签拒绝（fail-closed）。
+    signing-key: ${KYLIN_SKILL_SIGNING_KEY:}
+  host-agent:
+    shared-token: ${HOST_AGENT_SHARED_TOKEN:}
+    offline-timeout-seconds: 180
+    running-timeout-seconds: 120
+    native-guard:
+      # 结构化姿态失败安全（决赛计划 G）：目标主机安全姿态未知或过期时，R3+ 写操作拒绝。
+      require-fresh-posture: ${HOST_AGENT_NATIVE_GUARD_REQUIRE_FRESH:true}
+      posture-max-age-minutes: ${HOST_AGENT_NATIVE_GUARD_MAX_AGE_MINUTES:30}
+    grpc:
+      enabled: true
+      control-port: ${HOST_AGENT_GRPC_CONTROL_PORT:9090}
+      enroll-port: ${HOST_AGENT_GRPC_ENROLL_PORT:9091}
+      cert-dir: ${HOST_AGENT_GRPC_CERT_DIR:./data/host-agent-certs}
+      ca-overlap-grace-seconds: ${HOST_AGENT_GRPC_CA_OVERLAP_GRACE_SECONDS:604800}
+      reissue-token-ttl-seconds: ${HOST_AGENT_GRPC_REISSUE_TOKEN_TTL_SECONDS:600}
+      artifact-dir: ${HOST_AGENT_GRPC_ARTIFACT_DIR:./data/host-agent-artifacts}
+      max-artifact-bytes: ${HOST_AGENT_GRPC_MAX_ARTIFACT_BYTES:10485760}
+      bootstrap-token: ${HOST_AGENT_BOOTSTRAP_TOKEN:${HOST_AGENT_SHARED_TOKEN:}}
+      # 平台服务端证书 SAN。默认仍含 localhost / 127.0.0.1，跨主机时追加真实主机名与 IP。
+      # 已有 server.crt 缺任一配置名时会按新名单重签。
+      server-dns-names: ${HOST_AGENT_GRPC_SERVER_DNS_NAMES:localhost}
+      server-ip-addresses: ${HOST_AGENT_GRPC_SERVER_IP_ADDRESSES:127.0.0.1}
+  agent-runtime:
+    enabled: ${AGENT_RUNTIME_ENABLED:true}
+    worker-id: ${AGENT_RUNTIME_WORKER_ID:backend-1}
+    lease-seconds: ${AGENT_RUNTIME_LEASE_SECONDS:30}
+    poll-delay-ms: ${AGENT_RUNTIME_POLL_DELAY_MS:250}
+    max-agentic-rounds: ${AGENT_RUNTIME_MAX_AGENTIC_ROUNDS:8}
+    model-timeout-seconds: ${AGENT_RUNTIME_MODEL_TIMEOUT_SECONDS:30}
+    tool-timeout-seconds: ${AGENT_RUNTIME_TOOL_TIMEOUT_SECONDS:30}
+    # 本进程同时执行的 run 数上限（AgentRunWorker 的执行线程池容量）。
+    # 与 tenant_runtime_quota.max_concurrent_runs（默认 8，见 leaseNext 的配额子查询）
+    # 取交集：单租户不超过配额，本进程不超过这里。run 大部分时间阻塞在模型/工具 I/O 上，
+    # 线程数可以明显高于核数。
+    max-concurrent-runs: ${AGENT_RUNTIME_MAX_CONCURRENT_RUNS:8}
+    connector:
+      connect-timeout-ms: ${AGENT_RUNTIME_CONNECTOR_CONNECT_TIMEOUT_MS:5000}
+      read-timeout-ms: ${AGENT_RUNTIME_CONNECTOR_READ_TIMEOUT_MS:15000}
+      max-request-body-bytes: ${AGENT_RUNTIME_CONNECTOR_MAX_REQUEST_BODY_BYTES:262144}
+      webhook:
+        base-url: ${AGENT_RUNTIME_CONNECTOR_WEBHOOK_BASE_URL:}
+        credential-reference: ${AGENT_RUNTIME_CONNECTOR_WEBHOOK_CREDENTIAL_REFERENCE:}
+      http-read:
+        base-url: ${AGENT_RUNTIME_CONNECTOR_HTTP_READ_BASE_URL:}
+        credential-reference: ${AGENT_RUNTIME_CONNECTOR_HTTP_READ_CREDENTIAL_REFERENCE:}
+  context:
+    window-tokens: ${AGENT_CONTEXT_WINDOW_TOKENS:32000}
+    summary-threshold: ${AGENT_CONTEXT_SUMMARY_THRESHOLD:0.6}
+  runtime:
+    retention-enabled: ${AGENT_RUNTIME_RETENTION_ENABLED:true}
+    retention-days: ${AGENT_RUNTIME_RETENTION_DAYS:90}
+    retention-sweep-delay-ms: ${AGENT_RUNTIME_RETENTION_SWEEP_DELAY_MS:86400000}
+    wait-timeout-sweep-enabled: ${AGENT_RUNTIME_WAIT_TIMEOUT_SWEEP_ENABLED:true}
+    wait-timeout-sweep-delay-ms: ${AGENT_RUNTIME_WAIT_TIMEOUT_SWEEP_DELAY_MS:300000}
+  host-task-events:
+    redis:
+      enabled: ${HOST_TASK_REDIS_EVENTS_ENABLED:true}
+      host: ${HOST_TASK_REDIS_HOST:localhost}
+      port: ${HOST_TASK_REDIS_PORT:6379}
+      timeout-ms: ${HOST_TASK_REDIS_TIMEOUT_MS:2000}
+      username: ${HOST_TASK_REDIS_USERNAME:}
+      password: ${HOST_TASK_REDIS_PASSWORD:}
+      tls:
+        enabled: ${HOST_TASK_REDIS_TLS_ENABLED:false}
+        server-name: ${HOST_TASK_REDIS_TLS_SERVER_NAME:}
+      stream-max-len: ${HOST_TASK_REDIS_STREAM_MAX_LEN:0}
+      poll-delay-ms: ${HOST_TASK_REDIS_POLL_DELAY_MS:1000}
+      assistant-events-stream: ${HOST_TASK_ASSISTANT_EVENTS_STREAM:stream:assistant-events}
+      host-task-events-stream: ${HOST_TASK_EVENTS_STREAM:stream:host-task-events}
+      approval-events-stream: ${HOST_TASK_APPROVAL_EVENTS_STREAM:stream:approval-events}
+      requested-group: ${HOST_TASK_REQUESTED_GROUP:kylin-backend-host-control}
+      completed-group: ${HOST_TASK_COMPLETED_GROUP:kylin-backend-assistant}
+      approval-group: ${HOST_TASK_APPROVAL_GROUP:kylin-backend-approval}
+      consumer-name: ${HOST_TASK_REDIS_CONSUMER_NAME:backend-1}
+      dead-letter-stream: ${HOST_TASK_REDIS_DLQ_STREAM:stream:host-task-events:dlq}
+      max-delivery-attempts: ${HOST_TASK_REDIS_MAX_DELIVERY_ATTEMPTS:5}
+      pending-claim-idle-ms: ${HOST_TASK_REDIS_PENDING_CLAIM_IDLE_MS:30000}
+      publish-retry-backoff-seconds: ${HOST_TASK_REDIS_PUBLISH_BACKOFF_SECONDS:2}
+      max-publish-attempts: ${HOST_TASK_REDIS_MAX_PUBLISH_ATTEMPTS:10}
+      capacity:
+        throttle-length: ${HOST_TASK_REDIS_CAPACITY_THROTTLE_LENGTH:0}
+        divert-length: ${HOST_TASK_REDIS_CAPACITY_DIVERT_LENGTH:0}
+        divert-stream-suffix: ${HOST_TASK_REDIS_CAPACITY_DIVERT_STREAM_SUFFIX::overflow}
+      resource-lock-prefix: ${HOST_TASK_REDIS_RESOURCE_LOCK_PREFIX:kylin:host-resource-lock}
+      resource-lock-ttl-ms: ${HOST_TASK_REDIS_RESOURCE_LOCK_TTL_MS:1800000}
+      status-cache-prefix: ${HOST_TASK_REDIS_STATUS_CACHE_PREFIX:kylin:host-task-status}
+      status-cache-ttl-ms: ${HOST_TASK_REDIS_STATUS_CACHE_TTL_MS:86400000}
+      alert:
+        pending-threshold: ${HOST_TASK_REDIS_PENDING_WARN_THRESHOLD:100}
+        pending-critical-threshold: ${HOST_TASK_REDIS_PENDING_CRITICAL_THRESHOLD:1000}
+        dead-letter-threshold: ${HOST_TASK_REDIS_DLQ_WARN_THRESHOLD:1}
+        outbox-failed-threshold: ${HOST_TASK_REDIS_OUTBOX_FAILED_WARN_THRESHOLD:1}
+  screen:
+    shared-token: ${SCREEN_SHARED_TOKEN:}
+  rag:
+    # LOCAL = 本地 hash 分桶伪向量，不具备语义检索能力，仅作离线演示占位。
+    # 真语义检索需把 embedding 提供商配成 OPENAI_COMPATIBLE 并提供可用端点。
+    milvus-enabled: ${RAG_MILVUS_ENABLED:false}
+    milvus-base-url: ${RAG_MILVUS_BASE_URL:http://localhost:19530}
+    milvus-collection: ${RAG_MILVUS_COLLECTION:kylinops_rag_chunks}
+    elasticsearch-enabled: ${RAG_ELASTICSEARCH_ENABLED:false}
+    elasticsearch-base-url: ${RAG_ELASTICSEARCH_BASE_URL:http://localhost:9200}
+    elasticsearch-index: ${RAG_ELASTICSEARCH_INDEX:kylinops-rag-chunks}
+    redis-enabled: ${RAG_REDIS_ENABLED:false}
+    redis-base-url: ${RAG_REDIS_BASE_URL:localhost:6379}
+    redis-prefix: ${RAG_REDIS_PREFIX:kylinops}

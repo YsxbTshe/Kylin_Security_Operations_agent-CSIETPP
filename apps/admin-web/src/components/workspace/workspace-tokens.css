@@ -1,0 +1,66 @@
+/**
+ * 工作台派生 token。
+ *
+ * 全屏工作台是独立的视觉语言（不套 AdminLayout，密度与节奏都不同），
+ * 但**配色必须与系统同源**：这里每个色值都由 styles/tokens.css 的全局变量
+ * color-mix 派生，不新造色板，明暗主题自动跟随。
+ *
+ * 一条贯穿全局的约定：**色相只表达状态，不表达类别**。
+ * 事件属于「模型 / 工具 / 子 Agent / 策略」哪个频道，由图标和轨道位置表达；
+ * 绿黄红只在真的成功/等待/失败时出现。于是一次健康的运行整屏中性灰，
+ * 屏幕上一出现红色就一定值得看——这是给运维和安全工程师的界面该有的信噪比。
+ */
+.ws-scope {
+  /* ── 动效规范：克制 ──────────────────────────────────────────
+   * 时长 120/160/200ms 三挡，统一 ease-out；位移 ≤ 4px，缩放 ≥ 0.98。
+   * 不做弹跳、不做长缓动。reduced-motion 由 styles/base.css 全局兜底。 */
+  --ws-fast: 120ms;
+  --ws-base: 160ms;
+  --ws-slow: 200ms;
+  --ws-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+
+  /* 全局唯一的一处「发光」：1px 描边 + 一圈极淡外扩，只给「正在进行」的对象。
+   * 阴影本身仍用系统的 --shadow / --shadow-2 / --shadow-pop。 */
+  --ws-glow: 0 0 0 1px var(--accent-ring),
+             0 0 14px -6px color-mix(in oklch, var(--accent) 70%, transparent);
+
+  /* 轨道与刻度：中性，把色相让给状态 */
+  --ws-rail: color-mix(in oklch, var(--border-2) 65%, transparent);
+  --ws-tick: color-mix(in oklch, var(--text-3) 42%, transparent);
+
+  /* 面板层次：比后台页面更冷一档，强化「控制台」的感觉 */
+  --ws-panel: color-mix(in oklch, var(--surface) 88%, var(--bg));
+  --ws-inset: color-mix(in oklch, var(--surface-2) 70%, var(--surface));
+
+  /* 状态色的唯一出口：组件一律引用这五个，不直接写 --ok/--warn/--danger */
+  --ws-neutral: var(--text-3);
+  --ws-running: var(--accent);
+  --ws-ok: var(--ok);
+  --ws-warn: var(--warn);
+  --ws-danger: var(--danger);
+}
+
+/* 展开/收起统一用 grid-template-rows 0fr→1fr：可动画且不需要测量高度。 */
+.ws-collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--ws-base) var(--ws-ease);
+}
+.ws-collapse > * {
+  overflow: hidden;
+  min-height: 0;
+}
+.ws-collapse.is-open {
+  grid-template-rows: 1fr;
+}
+
+/* 「正在进行」的呼吸环：唯一的循环动画，1.8s，透明度 0.55→1，无缩放溢出。 */
+@keyframes ws-breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}

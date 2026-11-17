@@ -1,0 +1,36 @@
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: kylinops-prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+
+  - name: Tempo
+    uid: kylinops-tempo
+    type: tempo
+    access: proxy
+    url: http://tempo:3200
+    editable: true
+    jsonData:
+      httpMethod: GET
+      serviceMap:
+        datasourceUid: kylinops-prometheus
+      tracesToMetrics:
+        datasourceUid: kylinops-prometheus
+
+  - name: Elasticsearch Audit
+    uid: kylinops-elasticsearch-audit
+    type: elasticsearch
+    access: proxy
+    url: http://host.docker.internal:9200
+    editable: true
+    jsonData:
+      index: aiops-agent-events*
+      interval: Daily
+      timeField: "@timestamp"
+      logMessageField: payload_json
+      logLevelField: risk_code

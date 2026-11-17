@@ -1,0 +1,7 @@
+{
+  "appendOnly" : true,
+  "supersedesChain" : true,
+  "staleDowngrade" : true,
+  "conflictSurfacing" : true,
+  "taskAffinityChannel" : true
+}

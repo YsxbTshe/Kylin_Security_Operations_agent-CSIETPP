@@ -1,0 +1,38 @@
+package com.superskidder.kylinops.backend.host;
+
+public record HostSummary(
+        String hostname,
+        String ip,
+        String status,
+        String osVersion,
+        String cpuUsage,
+        String memoryUsage,
+        String diskUsage,
+        String loadAverage,
+        String uptimeText,
+        String nodeId,
+        String clusterName,
+        String agentVersion,
+        java.util.List<String> supportedTools,
+        String lastHeartbeatAt,
+        boolean grpcConnected,
+        String grpcConnectedAt,
+        String certSubject,
+        String certExpiresAt,
+        String certStatus,
+        String nativeGuardStatus,
+        String nativeGuardCheckedAt,
+        int nativeGuardCriticalCount,
+        int nativeGuardWarningCount,
+        String nativeGuardJson,
+        String nodeExporterStatus,
+        String nodeExporterCheckedAt,
+        Double nodeExporterCpuUsagePercent,
+        Double nodeExporterMemoryUsagePercent,
+        Double nodeExporterFilesystemUsagePercent,
+        Double nodeExporterLoad1,
+        String nodeExporterJson,
+        String organizationId,
+        String organizationName
+) {
+}
