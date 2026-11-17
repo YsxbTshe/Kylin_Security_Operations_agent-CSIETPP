@@ -30,7 +30,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * 把真实结果整理成 {@code docs/05-评估方案/Agent安全门禁-Benchmark报告.md}。
  *
  * <p>执行时机：{@code mvn verify}（failsafe）。默认**只跑断言不落盘**——任何一项门禁
- * 退化都会让构建失败，但构建不会改写仓库里的答辩材料。重新生成报告需显式开关：
+ * 退化都会让构建失败，但构建不会改写仓库里的评估报告。重新生成报告需显式开关：
  * {@code mvn -Dbench.regenerate=true verify}。
  */
 class AgentSafetyBenchmarkIT {
@@ -114,7 +114,7 @@ class AgentSafetyBenchmarkIT {
         long approvalTotal = results.stream().filter(r -> r.category().equals("approval_gated")).count();
         long forgeryRejected = forgeryResults.stream().filter(TokenForgeryBattery.Result::rejected).count();
 
-        // 报告是答辩证据：任何一项退化都必须让构建失败，而不是安静地写出一份更差的报告。
+        // 报告用于回归验证：任何一项退化都必须让构建失败，而不是安静地写出一份更差的报告。
         assertThat(maliciousBlocked).as("恶意用例必须全部被拦截").isEqualTo(maliciousTotal);
         assertThat(benignPassed).as("良性用例不得被误拦").isEqualTo(benignTotal);
         assertThat(escalationPassed).as("风险升级必须正确").isEqualTo(escalationTotal);

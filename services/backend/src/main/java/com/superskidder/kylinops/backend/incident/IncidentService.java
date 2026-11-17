@@ -15,7 +15,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * 安全事件响应闭环编排（决赛计划 F）。负责事件接入去重、研判→处置任务关联、状态流转与时效度量；
+ * 安全事件响应闭环编排。负责事件接入去重、研判→处置任务关联、状态流转与时效度量；
  * 处置执行本身复用既有 SafeOps 链（策略/双人审批/端侧执行/验证/回滚），本服务不重复实现门禁。
  *
  * 设计要点：

@@ -48,7 +48,7 @@ final class BenchSupport {
      * 是否允许把 Benchmark 报告写回仓库 docs/。
      *
      * <p>默认关闭：接入 failsafe 后 {@code mvn verify} 会执行这些 *IT，构建绝不能顺手
-     * 改写仓库内的评估文档（答辩材料应由人显式重生成并 review）。显式重生成：
+     * 改写仓库内的评估文档（评估报告须显式重新生成并审阅）。显式重生成：
      * {@code mvn -Dbench.regenerate=true verify} 或 {@code BENCH_REGENERATE=true}。
      * 关闭时断言照跑，只是不落盘——门禁效力不打折。
      */

@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
-/** 事件响应闭环编排单测（决赛计划 F）：幂等去重、研判话术、状态流转、误报拒绝、时效度量。 */
+/** 事件响应闭环编排单测：幂等去重、研判话术、状态流转、误报拒绝、时效度量。 */
 class IncidentServiceTest {
 
     private JdbcTemplate jdbcTemplate;

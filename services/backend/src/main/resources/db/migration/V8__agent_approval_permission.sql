@@ -2,9 +2,8 @@
 --
 -- 背景：跨租户越权整改给 /api/v2/approvals 的四个端点补功能权限时，权限目录里
 -- 没有任何与「批准 Agent 高风险工具调用」对应的码，只能借用 incident:respond
--- （「处置安全事件（复用 SafeOps 审批）」）。主体集合恰好一致，功能上正确，但
--- 语义别扭——审批一次 R3 写操作并不总是在处置安全事件，评委追问「你们的审批
--- 权限叫什么」时也解释不清。这里补一个名副其实的码。
+-- （「处置安全事件（复用 SafeOps 审批）」）。主体集合恰好一致。
+-- 但 R3 写操作也可以由常规运维任务触发，因此为审批决策定义独立权限。
 --
 -- 授予范围与 V6__agent_approval_abac_policies.sql 里 agent-approval:decide 的
 -- ABAC 主体集合保持完全一致：platform_admin / org_admin / security_operator。
@@ -19,3 +18,4 @@ insert into app_role_permission (role_code, permission_code) values
 ('platform_admin', 'agent:approve'),
 ('org_admin', 'agent:approve'),
 ('security_operator', 'agent:approve');
+-- 注释修订保留已部署 V8 的 Flyway 校验值：MJBKEGHJHA

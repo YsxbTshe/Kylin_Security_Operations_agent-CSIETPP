@@ -3,7 +3,7 @@ package com.superskidder.kylinops.backend.incident;
 import java.util.Map;
 
 /**
- * 事件时效指标（决赛计划 F）。基于已解决事件的均值：
+ * 事件时效指标。基于已解决事件的均值：
  *  · avgAcknowledgeSeconds：detected → acknowledged（响应启动耗时）
  *  · avgContainSeconds：detected → contained（遏制耗时，MTTD 口径）
  *  · avgResolveSeconds：detected → resolved（MTTR）

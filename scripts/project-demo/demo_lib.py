@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Shared helpers for the isolated finals demo automation."""
+"""Shared helpers for the isolated demo automation."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ import urllib.request
 from typing import Any
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
-DEFAULT_ENV_FILE = REPO_ROOT / ".secrets" / "finals-demo.env"
+DEFAULT_ENV_FILE = REPO_ROOT / ".secrets" / "project-demo.env"
 
 
 def load_env(path: pathlib.Path = DEFAULT_ENV_FILE) -> dict[str, str]:

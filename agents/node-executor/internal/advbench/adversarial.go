@@ -1,4 +1,4 @@
-// Package advbench 是对抗桩基准（决赛计划 Q §2.10.6）。
+// Package advbench 是对抗桩基准。
 //
 // 它把 LLM / daemon 整体当作对抗桩：不经模型推理，直接发射一批恶意 SafeToolCall
 // ——越权工具、超范围参数、不可逆动作、伪造令牌、重放令牌、计划模式写命令。

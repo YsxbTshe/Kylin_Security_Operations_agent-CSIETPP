@@ -102,7 +102,7 @@ public class DashboardService {
     }
 
     /**
-     * 安全事件响应闭环大屏板块（决赛计划 F）。事件表可能尚未建（旧库），用 try/catch 兜底为空板块，
+     * 安全事件响应闭环大屏板块。事件表可能尚未建（旧库），用 try/catch 兜底为空板块，
      * 保证大屏在任何库版本下都不报错。MTTR = 已解决事件 detected→resolved 的均值。
      */
     private ScreenDashboardResponse.IncidentBoard buildIncidentBoard(String organizationId) {
@@ -460,7 +460,7 @@ public class DashboardService {
                 """, Long.class));
         String capacity = redisCapacityStatus(consumerFailures, 0, 0, 0, 0);
         // Redis Stream 长度/积压未接入 INFO，不以硬编码 0 伪装"队列健康"。
-        // 真实信号只剩 consumer_failure 表；面板状态标为 DISABLED 以免评委把 0 当成健康。
+        // 真实信号只剩 consumer_failure 表；面板状态标为 DISABLED 以免把缺失数据误读为健康状态。
         String status = "CRITICAL".equals(capacity) || "WARN".equals(capacity) ? capacity : "DISABLED";
         String capacityLevel = switch (capacity) {
             case "CRITICAL" -> "CRITICAL";

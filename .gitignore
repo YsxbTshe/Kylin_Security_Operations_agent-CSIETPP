@@ -60,11 +60,10 @@ __pycache__/
 # Local VM images, cloud-init seeds and SSH keys (never commit)
 vms/
 
-# 提交包构建产物（由 scripts/build-submission.sh 生成，不入库）
+# 项目打包产物（由 scripts/build-submission.sh 生成，不入库）
 build/
 
 # 宣传片制作工程：分镜、抓帧、截图等中间件，且内含成片副本。
-# 最终交付的 5 段成片与封面在 docs/08-决赛冲刺/promo-videos/ 下单独入库。
 videos/
 # 抓站工具留下的失败日志，不是项目产物
 capture/

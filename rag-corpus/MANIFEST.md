@@ -13,10 +13,10 @@ Authoritative documentation corpus for a RAG system about the Kylin operating sy
 
 **本目录下的全部语料均为第三方作品，版权归各原权利人所有；本仓库不主张任何权利，也不对其重新授权。**
 
-- **用途限定**：这些文件**仅用于本参赛作品（"软件杯" 赛题 1 · A 组，麒麟安全智能运维 Agent）的 RAG 检索实验**——即被切分、向量化后作为检索语料，用于验证问答与规划链路的可溯源性。**不用于任何商业用途，不作为独立出版物再分发。**
+- **用途限定**：这些文件**仅用于本项目的 RAG 检索实验**——即被切分、向量化后作为检索语料，用于验证问答与规划链路的可溯源性。**不用于任何商业用途，不作为独立出版物再分发。**
 - **未作实质性修改**：`.md` 文件是对应官方 PDF / 网页的**文本抽取与格式清洗**结果（去除 EULA、隐私条款、页眉页脚、目录页码等非正文内容），未改写技术内容、未增删结论。两份 `.pdf` 为**未经修改的官方原件**，保留以便逐字回溯核对。
 - **溯源可查**：下表逐条记录 `source_url`（原始获取地址）、`publisher`（权利人）、`retrieval_date`（获取日期）。凡 `source_url` 标注为 `(sysadmin manual extract)` 的行，均为 `kylinos/kylin-v10-server-sysadmin-manual-2024.pdf` 一行所列官方 PDF 的**章节摘录**，其原始出处以该 PDF 行的 URL 为准，不另行编造独立链接。
-- **KylinSoft / openKylin 材料**：银河麒麟系列手册、白皮书、FAQ 的著作权属**麒麟软件有限公司**；openKylin 文档属 **openKylin 开源社区**。本作品仅引用其公开发布版本用于技术验证；对外交付物（演示、答辩材料）中如引用其内容，均会标注出处。
+- **KylinSoft / openKylin 材料**：银河麒麟系列手册、白皮书、FAQ 的著作权属**麒麟软件有限公司**；openKylin 文档属 **openKylin 开源社区**。本作品仅引用其公开发布版本用于技术验证；项目文档与演示材料中如引用其内容，均会标注出处。
 - **上游开源文档**：`linux-ops/` 下的 man page / 项目文档来自 firewalld、systemd、linux-audit、Sudo Project、SELinux、libpwquality 等上游项目，各自许可证已在下表 "license / usage note" 列逐条标注（GPL / LGPL / ISC 等），随其原始许可证条款使用。
 - **移除请求**：若任一权利人认为上述使用不当，请提出，我们将立即从本仓库移除对应文件。
 

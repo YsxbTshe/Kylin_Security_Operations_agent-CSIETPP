@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
-/** 专家注册表 / 知识域 / Agent IAM 单测（决赛计划 R）：能力封套授权 fail-closed、upsert 幂等、知识域。 */
+/** 专家注册表 / 知识域 / Agent IAM 单测：能力封套授权 fail-closed、upsert 幂等、知识域。 */
 class AgentRegistryServiceTest {
 
     private JdbcTemplate jdbcTemplate;

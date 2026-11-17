@@ -139,7 +139,7 @@ OTEL_EXPORTER_OTLP_ENDPOINT=127.0.0.1:4317
 OTEL_EXPORTER_OTLP_INSECURE=true
 ```
 
-比赛版只要求单机可演示闭环：Grafana 看 dashboard，Tempo 查一次 SafeOps task trace，Prometheus scrape 后端和 Node Executor 指标。不做 HA、远程存储、多租户和复杂采样策略。
+单机验证包括在 Grafana 查看仪表盘、在 Tempo 核对一次受控任务的链路，以及通过 Prometheus 采集后端和 Node Executor 指标。不做 HA、远程存储、多租户和复杂采样策略。
 
 ## 6. 本次部署记录
 

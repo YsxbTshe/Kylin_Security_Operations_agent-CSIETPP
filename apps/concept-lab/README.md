@@ -1,6 +1,6 @@
-# 决赛概念实验室
+# 运维交互实验室
 
-这是一个独立的 Vite + Vue 3 + Three.js 交互 Demo，用于快速验证决赛 UI 重构与新交互方式。它不替代现有 `admin-web` 或 `dashboard-screen`，也不改变现有后端；七个场景均可在本地离线运行。
+这是一个独立的 Vite + Vue 3 + Three.js 交互 Demo，用于验证运维界面的交互方案。它不替代现有 `admin-web` 或 `dashboard-screen`，也不改变现有后端；七个场景均可在本地离线运行。
 
 ## 运行
 
@@ -30,8 +30,8 @@ npm run preview
 
 本 Demo 严格区分三类数据：
 
-- **项目实测数字**：来自 `docs/08-决赛冲刺/决赛事实基线与证据索引.md`。例如安全门禁固定测试集、RAG 和 Memory Benchmark；界面同时展示适用边界，不外推为开放世界结论。
-- **代码已实现能力**：如 RBAC、R0–R5、职责分离审批、HMAC-SM3 上下文绑定、SM3 审计链、gRPC + mTLS、41 个 MCP 工具。Demo 只改变展示方式。
+- **项目实测数字**：详见[性能测试报告](../../docs/06-提交文档/05-软件性能核心指标测试报告.md)和[基准数据](../../bench/)。例如安全门禁固定测试集、RAG 和 Memory Benchmark；界面同时展示适用边界，不外推为开放世界结论。
+- **代码已实现能力**：如 RBAC、R0–R5、职责分离审批、SM2-with-SM3 审批令牌、SM3 审计链、gRPC + mTLS、签名 MCP 工具目录。Demo 只改变展示方式。
 - **演示 fixture / 概念能力**：24 个逻辑实例、R1–R4 演示分组、主机状态、任务进度、ABAC、Memory Sleep 与部分路线图交互。界面显式标注“Demo / 模拟 / 待真机采集”。当前资产模型缺少 `site / room / rack / uPosition`，因此三维场景称为“逻辑/观测拓扑”，不能称真实物理机房。
 
 ## 生产接入点
@@ -44,7 +44,7 @@ npm run preview
 | Access Studio | IAM、`AccessControlService`、Policy Engine、Approval | ABAC 决策应由服务端完成；JIT token 绑定主体/资源/动作/TTL 且一次消费；Host 必须再次校验 |
 | Memory Lab | `GraphMemoryService`、实体链接、任务归档、召回日志 | 新增候选区、来源、有效期、冲突状态、整理预演与可撤销提交；按查询类型路由图增强 |
 | Agent Orchestration | SafeOps DAG、Policy、Approval、Skill Registry、Agent Registry、Trace | Agent/Skill 必须版本化；Handoff 使用类型化契约；权限取真人、Agent、Skill、资源与 Host 边界的交集 |
-| Roadmap | 静态决赛计划或受控配置 | D-8 后冻结；入口是否登台由真机证据、拒绝路径和降级路径共同决定 |
+| Roadmap | 项目迭代计划或受控配置 | 以实机记录、拒绝路径和降级路径验证功能 |
 
 ## Three.js 与离线策略
 

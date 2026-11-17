@@ -1,6 +1,6 @@
 import { getData, postData } from './http'
 
-/** 专家注册表 / 知识域 / Agent IAM（决赛计划 R）。 */
+/** 专家注册表 / 知识域 / Agent IAM。 */
 export interface AgentRegistryEntry {
   id: string
   agentKey: string

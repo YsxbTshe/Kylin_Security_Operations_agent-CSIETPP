@@ -34,7 +34,7 @@ MIN_SECTION = 400
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 CORPUS_DIR = REPO_ROOT / "rag-corpus"
 
-# 目录 → sourceType，便于在界面上按来源筛选并在答辩时说明权威性
+# 目录 → sourceType，便于在界面上按来源筛选并追溯语料出处
 SOURCE_TYPES = {
     "kylinos": "KYLIN_OFFICIAL",
     "openkylin": "OPENKYLIN_OFFICIAL",

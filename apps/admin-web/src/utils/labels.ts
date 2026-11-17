@@ -72,7 +72,7 @@ export const nodeTypeLabel = labeler(NODE_TYPE_LABELS)
 /**
  * 任务与步骤状态。
  * CANCELLED / CANCELED 两种拼写都收录：后端历史数据两种都存在，
- * 决赛计划里也点名要求消除这处漂移，在词表层面先做到界面一致。
+ * 统一词表，避免同一状态在各界面显示为不同名称。
  */
 export const TASK_STATUS_LABELS: Record<string, string> = {
   PENDING: '待处理',

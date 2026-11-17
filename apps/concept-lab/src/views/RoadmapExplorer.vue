@@ -10,7 +10,7 @@ const modes = {
 
 const items = [
   { week: 1, lane: '体验主线', title: 'Task Workspace 信息架构', desc: '统一问答页与控制台详情；九阶段、证据检查器、原始审计。', mode: 'robust', proof: '任务 fixture + 关键路径录屏', owner: 'FE × Agent' },
-  { week: 1, lane: '安全主线', title: '决赛口径与证据基线冻结', desc: '全部数字、状态、演示数据、失败降级与 Q&A 绑定证据。', mode: 'robust', proof: '事实索引逐条签收', owner: '全组' },
+  { week: 1, lane: '安全主线', title: '核对功能状态与验证证据', desc: '全部数字、状态、演示数据、失败降级与 Q&A 绑定证据。', mode: 'robust', proof: '事实索引逐条签收', owner: '全组' },
   { week: 1, lane: 'Agent 架构', title: 'Skill 与委派契约', desc: '定义 Skill Manifest、Agent Profile、类型化 Handoff、Artifact、预算和停止条件。', mode: 'extreme', proof: '2 个 Skill + 契约静态检查', owner: 'Agent × Security' },
   { week: 1, lane: '平台扩展', title: 'DevOps 变更对象接入', desc: '把发布、回滚、配置漂移映射为 SafeOps DAG 与审批上下文。', mode: 'ambitious', proof: 'Git → 计划 → 灰度 → 验证闭环', owner: 'BE × Agent' },
   { week: 1, lane: '安全纵深', title: 'Native Guard A/B 方案', desc: 'KYSEC / SELinux / auditd 状态归一、端侧拒绝与 systemd 沙箱对照。', mode: 'extreme', proof: '麒麟真机拒绝事件', owner: 'Host × Security' },
@@ -25,8 +25,8 @@ const items = [
   { week: 3, lane: '安全纵深', title: 'Native 系统 Hook 观测原型', desc: '从 auditd / eBPF / LSM 方案中择实机可证的观测点，明确不做空泛拦截。', mode: 'extreme', proof: '攻击/误报/开销对照', owner: 'Security × Host' },
   { week: 3, lane: '基础合规', title: '等保三级自评证据页', desc: '控制—措施—证据—差距；数据库最小账号/TLS/备份恢复与 SBOM。', mode: 'ambitious', proof: '自评矩阵 + 一次恢复记录', owner: 'Security × DBA' },
   { week: 3, lane: '主动安全', title: '麒麟漏洞与加固复扫闭环', desc: '导入漏洞/弱配置结果，关联麒麟版本与资产上下文，经审批灰度加固、复扫并保留回滚证据。', mode: 'extreme', proof: '风险排序 + canary 修复 + 复扫残留', owner: 'Security × Host' },
-  { week: 4, lane: '冻结与演练', title: 'D-8 功能冻结 / 四级降级', desc: 'Live 智能 → Live 确定性 → 真实历史回放 → 离线视频与证据包。', mode: 'robust', proof: '断网/模型故障彩排', owner: '全组' },
-  { week: 4, lane: '演示增强', title: '端到端导演与评委分支', desc: '主叙事 3 分钟；准备安全、架构、Benchmark、国产化四条深挖支线。', mode: 'ambitious', proof: 'Q&A 实战评分', owner: 'Demo × 全组' },
+  { week: 4, lane: '冻结与演练', title: '版本冻结与降级路径验证', desc: 'Live 智能 → Live 确定性 → 真实历史回放 → 离线视频与证据包。', mode: 'robust', proof: '断网/模型故障彩排', owner: '全组' },
+  { week: 4, lane: '演示增强', title: '端到端演练与专项验证', desc: '复核核心流程，以及安全、架构、基准测试和麒麟兼容性的验证证据。', mode: 'ambitious', proof: '专项验证记录', owner: 'Demo × 全组' },
   { week: 4, lane: '高限冲刺', title: '候选高限功能择优合流', desc: 'Agent Runtime / DevOps / ABAC / Native Hook / Memory / Graph 路由以证据成熟度决定登台深度。', mode: 'extreme', proof: '红黄绿 readiness gate', owner: '全组' },
 ]
 
@@ -40,7 +40,7 @@ const toggle = (mode) => { enabled.value[mode] = !enabled.value[mode] }
 <template>
   <div class="roadmap-view">
     <div class="hero-row">
-      <div><p class="eyebrow">四周决赛交付安排</p><h2 class="section-heading">不是替你做取舍，而是把每种上限和证据门槛摊开</h2><p class="section-copy">三个开关是叠加层，不是三选一。默认展示全部 {{ items.length }} 个工作包；关闭某层只是查看不同负荷，不代表放弃该方向。</p></div>
+      <div><p class="eyebrow">四周迭代计划</p><h2 class="section-heading">不是替你做取舍，而是把每种上限和证据门槛摊开</h2><p class="section-copy">三个开关是叠加层，不是三选一。默认展示全部 {{ items.length }} 个工作包；关闭某层只是查看不同负荷，不代表放弃该方向。</p></div>
       <div class="hero-actions roadmap-switches"><button v-for="(config,id) in modes" :key="id" :class="[id,{active:enabled[id]}]" @click="toggle(id)"><span></span><div><b>{{ config.name }} · {{ config.label }}</b><small>{{ enabled[id]?'已纳入视图':'暂时隐藏' }}</small></div></button></div>
     </div>
 
@@ -48,7 +48,7 @@ const toggle = (mode) => { enabled.value[mode] = !enabled.value[mode] }
 
     <div class="roadmap-layout">
       <section class="panel timeline-board">
-        <header class="week-head"><div v-for="week in 4" :key="week"><span>第 {{ week }} 周</span><b>{{ ['重构地基','并行跃迁','真机收证','冻结演练'][week-1] }}</b><small>{{ ['D-30 → D-24','D-23 → D-17','D-16 → D-9','D-8 → 决赛'][week-1] }}</small></div></header>
+        <header class="week-head"><div v-for="week in 4" :key="week"><span>第 {{ week }} 周</span><b>{{ ['重构地基','并行跃迁','真机收证','冻结演练'][week-1] }}</b><small>{{ ['方案核对','模块联调','实机验证','回归验收'][week-1] }}</small></div></header>
         <div class="timeline-grid">
           <div v-for="week in 4" :key="week" class="week-column">
             <button v-for="item in visibleItems.filter(i=>i.week===week)" :key="item.title" class="roadmap-card" :class="[item.mode,{active:selected.title===item.title}]" @click="selected=item"><span class="mode-mark"></span><small>{{ item.lane }}</small><b>{{ item.title }}</b><p>{{ item.desc }}</p><footer><span>{{ item.owner }}</span><Icon name="chevron" :size="12"/></footer></button>

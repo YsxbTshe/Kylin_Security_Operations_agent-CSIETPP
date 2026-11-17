@@ -13,7 +13,7 @@ public record ScreenDashboardResponse(
         IncidentBoard incidents
 ) {
 
-    /** 安全事件响应闭环大屏板块（决赛计划 F）：闭环计数 + 时效（MTTR）+ 最新事件。 */
+    /** 安全事件响应闭环大屏板块：闭环计数 + 时效（MTTR）+ 最新事件。 */
     public record IncidentBoard(
             long total,
             long open,

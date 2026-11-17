@@ -1,14 +1,6 @@
 #!/usr/bin/env bash
 #
-# 构建"软件杯"决赛提交包。
-#
-# 本脚本以受控文件清单装配交付物，并在装配后检查依赖目录、敏感信息、
-# 可执行文件、文档口径和视频规格，保证提交包可重复生成。
-#
-# 决赛提交要求（2026-08-15 09:00 — 08-18 24:00）：
-#   初赛全部内容（源码、可执行文件、PPT、开发文档、演示视频）
-#   + 1 分钟以内作品亮点短视频
-#   注：开发文档将统一组织专家评审 —— 即 01~05 五份 .docx 是被单独评的。
+# 生成项目安装包、源码包和技术文档，并验证产物。
 #
 # 用法：
 #   bash scripts/build-submission.sh            # 全量构建 + 装配 + 自检
@@ -104,15 +96,11 @@ build_all() {
     cp "$DOC_DIR/06-软件部署文档.md" "$STAGE/06-安装包/安装说明.md"
     cp "$DOC_DIR/06-软件部署文档.docx" "$STAGE/06-安装包/安装说明.docx"
 
-    note "==> 开发文档五件套（专家评审对象）"
+    note "==> 项目技术文档"
     mkdir -p "$STAGE/开发文档"
     for n in 01 02 03 04 05; do
         cp "$DOC_DIR/${n}-"*.docx "$STAGE/开发文档/"
     done
-
-    note "==> 项目介绍 PPT"
-    mkdir -p "$STAGE/PPT"
-    cp "$ROOT/docs/麒麟安全智能运维Agent_项目介绍.pptx" "$STAGE/PPT/"
 
     note "==> 源代码包（当前工作树中的受控文件）"
     mkdir -p "$STAGE/07-源代码"
@@ -145,24 +133,9 @@ for entry in raw.split(b"\0"):
         shutil.copy2(src, dst)
 PY
 
-    # 源码包裁剪。两类必须剔除，一类按内部材料剔除：
-    #
-    # (1) 第三方受版权材料 —— COPYRIGHT.md 明确承诺「不随交付物分发」。
-    #     不剔除的话，合规评委读完 COPYRIGHT.md 再解压 zip 就会读到自相矛盾。
-    #     rag-corpus 的 .md 语料保留（是自制摘录，且 RAG 复现需要），只去 PDF 原件。
-    # (2) 构建/备份产物 —— .bak.pptx 是生成脚本的输入基线，不是交付物。
-    # (3) 内部过程材料 —— 决赛冲刺计划、组会同步、归档、状态审计：属项目管理产物，
-    #     不是软件的一部分；其中的诚实边界结论已并入 01~05 五件套正文。
+    # 原始厂商 PDF 不随项目分发。
     local pruned="$STAGE/07-源代码"
-    rm -f  "$pruned"/rag-corpus/kylinos/*.pdf
-    rm -rf "$pruned"/docs/ppt                       # 官方赛题解析 PPT 截图（第三方）
-    rm -f  "$pruned"/docs/*.bak.pptx
-    rm -rf "$pruned"/docs/99-归档 "$pruned"/docs/组会同步 \
-           "$pruned"/docs/08-决赛冲刺 "$pruned"/docs/01-架构设计 \
-           "$pruned"/docs/02-部署运行 "$pruned"/docs/03-项目状态 \
-           "$pruned"/docs/04-后续计划 "$pruned"/docs/05-评估方案 \
-           "$pruned"/docs/07-学术论文
-    # 留一份说明，交代这些内容为何不在包里（而不是让评委以为项目没做过）。
+    rm -f "$pruned"/rag-corpus/kylinos/*.pdf
     cat > "$pruned/rag-corpus/kylinos/README-第三方文档.md" <<'INNER'
 # 第三方文档说明
 
@@ -191,14 +164,11 @@ for source_arg, output_arg in zip(sys.argv[1::2], sys.argv[2::2]):
                 archive.write(path, path.relative_to(source).as_posix())
 PY
     cp "$STAGE/开发文档/"*.docx "$OUT/"
-    cp "$STAGE/PPT/"*.pptx "$OUT/"
-    cp "$ROOT/docs/08-决赛冲刺/promo-videos/决赛亮点短视频.mp4" \
-       "$OUT/09-作品亮点短视频.mp4"
-    rm -rf "$STAGE/06-安装包" "$STAGE/07-源代码" "$STAGE/开发文档" "$STAGE/PPT"
+    rm -rf "$STAGE/06-安装包" "$STAGE/07-源代码" "$STAGE/开发文档"
 }
 
 # ── 2. 自检 ────────────────────────────────────────────────────────────────
-# 提交包一旦交出去就无法追回，这里的每一条都对应一个真实发生过或差点发生的问题。
+# 检查归档内容与文档一致性。
 check_all() {
     note ""
     note "==> 自检"
@@ -207,27 +177,15 @@ check_all() {
 
     [ -d "$OUT" ] || { bad "输出目录不存在，请先不带 --check 运行一次"; return; }
 
-    # (a) 必交件齐全
+    # 检查项目产物齐全。
     local missing=0
     for f in "01-软件功能需求分析文档.docx" "02-软件功能设计文档.docx" \
              "03-软件产品说明书.docx" "04-软件功能测试报告.docx" \
              "05-软件性能核心指标测试报告.docx" \
-             "06-软件安装包及部署文件.zip" "07-软件源代码文件.zip" \
-             "麒麟安全智能运维Agent_项目介绍.pptx"; do
+             "06-软件安装包及部署文件.zip" "07-软件源代码文件.zip"; do
         [ -f "$OUT/$f" ] || { bad "缺件：$f"; missing=1; }
     done
-    [ "$missing" = 0 ] && ok "必交件齐全（开发文档 5 + 安装包 + 源码 + PPT）"
-
-    # (b) 决赛新增件：演示视频 + ≤1 分钟亮点短视频
-    if [ -f "$OUT/08-演示视频.mp4" ]; then ok "演示视频已就位"; else
-        warn "缺 08-演示视频.mp4 —— 决赛要求项，且 2026-07-19 那版录的是已删除的架构（sudo/DAG/Rollback 面板），不可复用"; fi
-    if [ -f "$OUT/09-作品亮点短视频.mp4" ]; then
-        local dur; dur="$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$OUT/09-作品亮点短视频.mp4" 2>/dev/null || echo 0)"
-        awk -v d="$dur" 'BEGIN{exit !(d>0 && d<=60)}' \
-            && ok "亮点短视频 ${dur}s（≤60s）" || bad "亮点短视频时长 ${dur}s 超过 1 分钟上限"
-    else
-        warn "缺 09-作品亮点短视频.mp4 —— 决赛**新增**必交项，1 分钟以内"
-    fi
+    [ "$missing" = 0 ] && ok "安装包、源码包与五份技术文档齐全"
 
     # (c) 安装包不得含 sudoers 配置；节点写操作由独立 privhelper 承担。
     unzip -Z1 "$OUT/06-软件安装包及部署文件.zip" > "$tmp/pkg.txt"
@@ -275,7 +233,6 @@ check_all() {
     #      这条自检的存在本身是因为首版打包违反了自己的版权声明。
     local third=0
     grep -qE 'rag-corpus/.*\.pdf$' "$tmp/src.txt" && { bad "源码包含麒麟官方 PDF —— 违反 COPYRIGHT.md"; third=1; }
-    grep -qE '^docs/ppt/.*\.png$'  "$tmp/src.txt" && { bad "源码包含官方赛题截图 —— 违反 COPYRIGHT.md"; third=1; }
     grep -qE '\.bak\.pptx$'        "$tmp/src.txt" && { bad "源码包含备份产物 .bak.pptx"; third=1; }
     [ "$third" = 0 ] && ok "第三方受版权材料未随包分发（与 COPYRIGHT.md 一致）"
     # 用 Python 读取 ZIP 目录，直接按 UTF-8 文件名核验中文说明文件。
@@ -296,7 +253,7 @@ sys.exit(0 if any('rag-corpus/kylinos/README-' in n for n in names) else 1)"; th
     done
     [ "$bins" = 0 ] && ok "三架构可执行文件齐全（node-executor + privhelper × amd64/arm64/loong64）"
 
-    # (g) 对外口径与代码一致（工具数）——评委会数
+    # (g) 技术文档与工具清单一致
     local tools; tools="$(python3 -c "import json;print(len(json.load(open('$ROOT/tool-packages/core-node-tools/manifest.json'))['tools']))")"
     local hits=0
     for d in "$OUT"/0[1-5]-*.docx; do
@@ -311,15 +268,15 @@ PY
     [ "$hits" -le 0 ] && ok "开发文档无过期口径（41 个 / 31 只读 / 正向的离线审计缓冲）" \
                       || bad "开发文档仍有 $hits 处过期口径"
 
-    # (h) 产出清单与哈希（提交前留档，便于事后自证提交内容）
-    (cd "$OUT" && shasum -a 256 ./*.zip ./*.docx ./*.pptx ./*.mp4 2>/dev/null > MANIFEST.sha256) || true
+    # (h) 产出清单与哈希（用于核对分发文件）
+    (cd "$OUT" && shasum -a 256 ./*.zip ./*.docx 2>/dev/null > MANIFEST.sha256) || true
     ok "已生成 MANIFEST.sha256"
 
     note ""
     if [ "$fail" = 0 ]; then
-        printf '%s提交包自检通过%s\n' "$GREEN" "$RESET"
+        printf '%s项目打包检查通过%s\n' "$GREEN" "$RESET"
     else
-        printf '%s提交包自检未通过 —— 请勿提交%s\n' "$RED" "$RESET"
+        printf '%s项目打包检查未通过%s\n' "$RED" "$RESET"
         return 1
     fi
 }

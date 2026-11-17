@@ -6,7 +6,7 @@ import (
 	"gitee.com/SuperSkidder/kylin-security-ops-agent/agents/node-executor/internal/safeops"
 )
 
-// attackBattery 枚举对抗桩的攻击面 × 参数取值域（决赛计划 Q §2.10.6）。
+// attackBattery 枚举对抗桩的攻击面 × 参数取值域。
 //
 // 每条攻击都刻意构造成「像一次合法下发」，只在某一处越界，用来逐点检验 Host 层的
 // 各道判定是否都拦得住。末尾附阳性对照，证明合法路径仍然通。

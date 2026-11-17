@@ -26,7 +26,7 @@ const ragBars = [
 <template>
   <div class="big-screen-view" :class="{ presenter }">
     <div class="hero-row screen-intro">
-      <div><p class="eyebrow">三幕演示视图</p><h2 class="section-heading">一块服务讲述的大屏，而不是指标墙</h2><p class="section-copy">三幕依次回答：系统守护什么、任务如何受控、效果如何被证据支持。演示模式只保留评委需要看的焦点。</p></div>
+      <div><p class="eyebrow">三幕演示视图</p><h2 class="section-heading">一块服务讲述的大屏，而不是指标墙</h2><p class="section-copy">三幕依次回答：系统守护什么、任务如何受控、效果如何被证据支持。演示视图聚焦任务状态、处置结果与证据。</p></div>
       <div class="hero-actions">
         <div class="segmented source-toggle"><button :class="{active:source==='synthetic'}" @click="source='synthetic'"><span class="live-dot"></span>合成演示流</button><button :class="{active:source==='replay'}" @click="source='replay'">回放接入预览</button></div>
         <button class="button" :class="{active:presenter}" @click="presenter=!presenter"><Icon name="screen" :size="15" />{{ presenter ? '退出演示模式' : '演示模式' }}</button>

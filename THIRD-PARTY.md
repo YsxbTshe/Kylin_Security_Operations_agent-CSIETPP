@@ -1,6 +1,6 @@
 # 第三方依赖与许可证清单（THIRD-PARTY NOTICES）
 
-本项目（麒麟安全智能运维 Agent）**未采用开源许可证**，著作权归参赛团队所有、保留所有权利，见仓库根 [`COPYRIGHT.md`](COPYRIGHT.md)。
+本项目（麒麟安全智能运维 Agent）**未采用开源许可证**，著作权归 Randomone 团队所有、保留所有权利，见仓库根 [`COPYRIGHT.md`](COPYRIGHT.md)。
 本文件披露的是本项目**所依赖的第三方组件**及其各自的许可证——它们与本项目自身的版权状态相互独立。
 本文件列出**直接依赖**及其许可证，供合规审查与供应链核查使用。
 
@@ -140,7 +140,7 @@
 | vite | 8.0.11 | MIT | dev |
 | vue-tsc | 3.2.6 | MIT | dev |
 
-## 6. 前端 `apps/finals-concept-lab`（概念验证原型）
+## 6. 前端 `apps/concept-lab`（概念验证原型）
 
 | 包 | 版本（lockfile 解析） | 许可证 | 类型 |
 |---|---|---|---|
@@ -186,10 +186,9 @@
 
 | 材料 | 位置 | 权利人 | 说明 |
 |---|---|---|---|
-| 麒麟 V10 官方手册 / 白皮书 / FAQ（PDF 及其抽取文本） | `rag-corpus/kylinos/`、`rag-corpus/kysec-security/` | 麒麟软件有限公司 | 见 [`rag-corpus/MANIFEST.md`](rag-corpus/MANIFEST.md)：仅用于本参赛作品的 RAG 检索实验，版权归原权利人 |
+| 麒麟 V10 官方手册 / 白皮书 / FAQ（PDF 及其抽取文本） | `rag-corpus/kylinos/`、`rag-corpus/kysec-security/` | 麒麟软件有限公司 | 见 [`rag-corpus/MANIFEST.md`](rag-corpus/MANIFEST.md)：仅用于本项目的 RAG 检索实验，版权归原权利人 |
 | openKylin 社区文档 | `rag-corpus/openkylin/` | openKylin 社区 | 同上 |
 | firewalld / systemd / audit / sudo / SELinux / libpwquality 上游文档 | `rag-corpus/linux-ops/` | 各上游项目 | 上游文档，许可证见 `MANIFEST.md` 逐条标注 |
-| 官方赛题解析 PPT 截图（13 张） | `docs/ppt/*.png` | 赛事主办方 / 麒麟软件有限公司 | 见 [`docs/ppt/SOURCE.md`](docs/ppt/SOURCE.md)：仅供参赛团队内部对齐赛题要求，不随作品对外分发 |
 
 ---
 
