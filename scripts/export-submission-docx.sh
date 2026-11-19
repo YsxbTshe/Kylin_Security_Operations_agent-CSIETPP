@@ -4,7 +4,7 @@
 # 用原 .docx 作 --reference-doc：样式表逐字节沿用，只换正文，版式不会变。
 #
 # 用法：bash scripts/export-submission-docx.sh [--check]
-#   --check  只校验 .docx 是否比同名 .md 新且无过期口径，不重新导出（供 CI 用）
+#   --check  校验导出时记录的源文件/Word 内容哈希及正文，不重新导出（供 CI 用）
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -28,11 +28,6 @@ for md in "$DOC_DIR"/*.md; do
     if [[ ! -f "$docx" ]]; then
         echo "⚠️  $name 无对应 .docx，跳过"
         continue
-    fi
-
-    if [[ "$CHECK_ONLY" == "--check" && "$md" -nt "$docx" ]]; then
-        echo "❌ $(basename "$docx") 早于 Markdown 源文件，请重新导出"
-        fail=1
     fi
 
     if [[ "$CHECK_ONLY" != "--check" ]]; then
@@ -82,6 +77,14 @@ if [[ $fail -ne 0 ]]; then
     echo
     echo "有 .docx 含过期口径。先修同名 .md，再重跑本脚本（不带 --check）。"
     exit 1
+fi
+
+# Git 检出和 ZIP 解包会重建 mtime，不能用它判断生成文件是否过期。
+# 仅在导出并通过正文检查后记录哈希；CI 直接比较文件内容，无需 pandoc。
+if [[ "$CHECK_ONLY" == "--check" ]]; then
+    python3 "$ROOT/scripts/docx-sources.py" --check "$DOC_DIR"
+else
+    python3 "$ROOT/scripts/docx-sources.py" --record "$DOC_DIR"
 fi
 echo
 echo "✅ Word 技术文档正文检查通过。"

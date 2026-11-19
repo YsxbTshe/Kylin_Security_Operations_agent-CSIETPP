@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "documents": {
+    "01-软件功能需求分析文档.md": {
+      "source_sha256": "5c47d3356a1853211d95f7407b667247f4864f2503870eb2b03b2aff61a44325",
+      "docx_sha256": "3b951c58d3b1c59db3ec4b88e431b44ca8f16fc7f6f6c418ef05b5f1e89769f1"
+    },
+    "02-软件功能设计文档.md": {
+      "source_sha256": "b670527110bbb6be0d57940c69f0d8f6aa850efa1707d30098637fd6426d9224",
+      "docx_sha256": "ec06565c90b30b26855f75b6387c9b012906def2715a31b6a24301bd2e4deafc"
+    },
+    "03-软件产品说明书.md": {
+      "source_sha256": "3c2063c85be6f8b0e03f7bf33363214f5898f83adf90a0d72b3773fb23b204e4",
+      "docx_sha256": "acd52a330aa45cef303f4b5252d73286a0ab15a424f3468be77c17d046497b03"
+    },
+    "04-软件功能测试报告.md": {
+      "source_sha256": "ba6636904b8918281819b2d4ca44f1f3ba2f1fcf445e23a31b72e9045a3d03ff",
+      "docx_sha256": "4698b4c4b28136dcec6988b8d3721cc7a0c9b294c476ff42524a0513197b73ba"
+    },
+    "05-软件性能核心指标测试报告.md": {
+      "source_sha256": "ccf15dc6bf1ef71ce41f51492646929975c3dc902513960c5a738fefaa330ccd",
+      "docx_sha256": "8dcb4ed29cf69f80a7660fc537635b848f429d9e2644d2318daa3870c7e85926"
+    },
+    "06-软件部署文档.md": {
+      "source_sha256": "9d304e18d2b0ee7efc9f9ca0988f2dd9c0ae49611da716bbd8dc06fa9573ed44",
+      "docx_sha256": "32a3f1806627483ada2f3e27ae02ed81f0b737c633490552dabdff449b76ab35"
+    }
+  }
+}

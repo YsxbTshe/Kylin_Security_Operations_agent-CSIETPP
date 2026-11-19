@@ -264,10 +264,10 @@ func (s *Server) serviceActionSnapshot(ctx context.Context, op string, args []st
 		"--property=ActiveState,SubState,LoadState,UnitFileState,MainPID,ActiveEnterTimestamp")
 	if err != nil {
 		encoded, encodeErr := json.Marshal(map[string]any{
-			"service":        unit,
-			"action":         strings.TrimPrefix(op, "service."),
-			"snapshotError":  err.Error(),
-			"commandOutput":  show,
+			"service":       unit,
+			"action":        strings.TrimPrefix(op, "service."),
+			"snapshotError": err.Error(),
+			"commandOutput": show,
 		})
 		if encodeErr != nil {
 			return ""
@@ -287,14 +287,14 @@ func encodeServiceSnapshot(unit string, action string, showOutput string) string
 		values[strings.TrimSpace(key)] = strings.TrimSpace(value)
 	}
 	payload := map[string]any{
-		"service":               unit,
-		"action":                action,
-		"loadState":             values["LoadState"],
-		"activeState":           values["ActiveState"],
-		"subState":              values["SubState"],
-		"unitFileState":         values["UnitFileState"],
-		"mainPID":               values["MainPID"],
-		"activeEnterTimestamp":  values["ActiveEnterTimestamp"],
+		"service":              unit,
+		"action":               action,
+		"loadState":            values["LoadState"],
+		"activeState":          values["ActiveState"],
+		"subState":             values["SubState"],
+		"unitFileState":        values["UnitFileState"],
+		"mainPID":              values["MainPID"],
+		"activeEnterTimestamp": values["ActiveEnterTimestamp"],
 	}
 	encoded, err := json.Marshal(payload)
 	if err != nil {

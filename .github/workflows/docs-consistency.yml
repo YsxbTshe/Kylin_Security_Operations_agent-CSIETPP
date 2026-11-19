@@ -18,6 +18,9 @@ jobs:
           python-version: "3.12"
 
       # 脚本只用标准库 + git ls-files，无需安装依赖。
+      - name: 文档生成校验回归测试
+        run: python3 -m unittest discover -s scripts/tests -v
+
       - name: 校验证据锚点与对外口径
         run: python3 scripts/verify-doc-consistency.py
 

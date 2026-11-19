@@ -35,7 +35,7 @@ type Config struct {
 func Load() Config {
 	workspaceRoot := envOrDefault("KYLIN_WORKSPACE_ROOT", "/var/lib/kylin-workspace")
 	return Config{
-		SocketPath:          envOrDefault("KYLIN_WORKSPACE_SOCKET", "/run/kylin-workspace/workspace.sock"),
+		SocketPath: envOrDefault("KYLIN_WORKSPACE_SOCKET", "/run/kylin-workspace/workspace.sock"),
 		// 与 privhelper 的 KYLIN_PRIVHELPER_PEER_USER 取同一个默认值：节点上
 		// node-executor 就是以 kylin-agent 运行的。填 "any" 可关闭对端校验（仅开发用，
 		// 启动时会打警告）；填别的名字或数字 uid 都会在启动时解析，解析不了直接退出。
